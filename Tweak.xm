@@ -22,6 +22,10 @@
 - (void)temporaryBlockStatusChanged;
 @end
 
+@interface SBFMobileKeyBagUnlockOptions : NSObject
+@property (nonatomic,copy,readonly) NSData * passcode;
+@end
+
 @interface SBLockScreenManager
 + (id)sharedInstance;
 - (void)lockScreenViewControllerRequestsUnlock;
@@ -35,6 +39,29 @@ __weak SBFDeviceLockOutController *lockOutController = NULL;
 
 BOOL isEnabled() {
     return [prefs boolForKey:@"enabled"] && [[prefs objectForKey:@"passcodeHash"] length] > 0;
+}
+
+BOOL doUnlock(NSString *passcode) {
+    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
+
+    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
+        NSLog(@"Successful unlock with passcode: %@", passcode);
+        isUnlocked = YES;
+        [prefs setInteger:0 forKey:@"failedAttempts"];
+        return YES;
+    } else {
+        NSLog(@"Failed unlock with passcode: %@", passcode);
+        int failedAttempts = [prefs integerForKey:@"failedAttempts"] + 1;
+        [prefs setInteger:failedAttempts forKey:@"failedAttempts"];
+        if (failedAttempts >= 6 && [prefs boolForKey:@"blockAfterTooManyFailures"]) {
+            [prefs setInteger:[NSDate date].timeIntervalSince1970 forKey:@"blockTime"];
+            if (lockOutController != NULL) {
+                NSLog(@"Triggering device lockout due to too many failed attempts");
+                [lockOutController temporaryBlockStatusChanged];
+            }
+        }
+        return NO;
+    }
 }
 
 %group FakePassUIKit
@@ -265,31 +292,22 @@ BOOL isEnabled() {
 %end
 
 %hook SBFMobileKeyBag
+// iOS 14
 - (BOOL)unlockWithPasscode:(NSString *)passcode error:(id *)error {
     if (!isEnabled()) {
         return %orig;
     }
 
-    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
+    return doUnlock(passcode);
+}
 
-    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
-        NSLog(@"Successful unlock with passcode: %@", passcode);
-        isUnlocked = YES;
-        [prefs setInteger:0 forKey:@"failedAttempts"];
-        return YES;
-    } else {
-        NSLog(@"Failed unlock with passcode: %@", passcode);
-        int failedAttempts = [prefs integerForKey:@"failedAttempts"] + 1;
-        [prefs setInteger:failedAttempts forKey:@"failedAttempts"];
-        if (failedAttempts >= 6 && [prefs boolForKey:@"blockAfterTooManyFailures"]) {
-            [prefs setInteger:[NSDate date].timeIntervalSince1970 forKey:@"blockTime"];
-            if (lockOutController != NULL) {
-                NSLog(@"Triggering device lockout due to too many failed attempts");
-                [lockOutController temporaryBlockStatusChanged];
-            }
-        }
-        return NO;
+// iOS 15
+- (BOOL)unlockWithOptions:(SBFMobileKeyBagUnlockOptions *)options error:(id *)error {
+    if (!isEnabled()) {
+        return %orig;
     }
+
+    return doUnlock([[NSString alloc] initWithData:[options passcode] encoding:NSUTF8StringEncoding]);
 }
 %end
 

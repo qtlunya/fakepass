@@ -69,7 +69,7 @@
 
     if (self) {
         HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
-        [prefs registerPreferenceChangeBlock:^(NSString *key, id value) { [self handlePasscodeChange]; } forKey:@"passcode"];
+        [prefs registerPreferenceChangeBlockForKey:@"passcode" block:^(NSString *key, id value) { [self handlePasscodeChange]; }];
     }
 
     return self;

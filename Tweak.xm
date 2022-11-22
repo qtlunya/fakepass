@@ -5,56 +5,79 @@
 @import Foundation;
 @import UIKit;
 
-#import <FrontBoardServices/FBSSystemService.h>
-#import <SpringBoard/SBApplication.h>
 #import <SpringBoard/SpringBoard.h>
-#import <SpringBoardServices/SBSRelaunchAction.h>
 
 #import <Cephei/HBPreferences.h>
+#import <Cephei/HBRespringController.h>
 
 #import "util.h"
 
-@interface SBCoverSheetPresentationManager
-+ (id)sharedInstance;
+@interface LASecureData
+- (NSData *)data;
+@end
+
+@interface MCProfileConnection
++ (instancetype)sharedConnection;
+- (id)effectiveValueForSetting:(NSString *)setting;
 @end
 
 @interface SBFDeviceLockOutController
+- (BOOL)isPermanentlyBlocked;
+- (BOOL)isTemporarilyBlocked;
 - (void)temporaryBlockStatusChanged;
 @end
 
 @interface SBFMobileKeyBagUnlockOptions : NSObject
-@property (nonatomic,copy,readonly) NSData * passcode;
+@property (nonatomic,copy,readonly) NSData *passcode;
 @end
 
 @interface SBLockScreenManager
-+ (id)sharedInstance;
+@property (getter=_lockOutController,nonatomic,retain) SBFDeviceLockOutController *lockOutController;
++ (instancetype)sharedInstance;
 - (void)lockScreenViewControllerRequestsUnlock;
 @end
 
 HBPreferences *prefs;
 BOOL isUnlocked;
+BOOL isInternalUnlock = NO;
+BOOL isResetting = NO;
 BOOL didStartBlock = NO;
+BOOL creatingPasscode = NO;
 int lastLockTime = 0;
-__weak SBFDeviceLockOutController *lockOutController = NULL;
 
-BOOL isEnabled() {
-    return [prefs boolForKey:@"enabled"] && [[prefs objectForKey:@"passcodeHash"] length] > 0;
+BOOL _isPasscodeSet() {
+    return [[prefs objectForKey:@"passcodeHash"] length] > 0;
+}
+
+BOOL isPasscodeSet() {
+    return _isPasscodeSet();
+}
+
+BOOL checkPasscode(NSString *passcode) {
+    if (isInternalUnlock && [passcode isEqualToString:@"__FAKEPASS_INTERNAL_UNLOCK"]) {
+        return YES;
+    }
+
+    prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
+    return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
 }
 
 BOOL doUnlock(NSString *passcode) {
-    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
-
-    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
+    if (checkPasscode(passcode)) {
         NSLog(@"Successful unlock with passcode: %@", passcode);
         isUnlocked = YES;
+        [prefs removeObjectForKey:@"blockTime"];
         [prefs setInteger:0 forKey:@"failedAttempts"];
         return YES;
     } else {
         NSLog(@"Failed unlock with passcode: %@", passcode);
         int failedAttempts = [prefs integerForKey:@"failedAttempts"] + 1;
         [prefs setInteger:failedAttempts forKey:@"failedAttempts"];
-        if (failedAttempts >= 6 && [prefs boolForKey:@"blockAfterTooManyFailures"]) {
+        if (failedAttempts >= 6) {
             [prefs setInteger:[NSDate date].timeIntervalSince1970 forKey:@"blockTime"];
+            SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
+            SBFDeviceLockOutController *lockOutController = lockScreenManager.lockOutController;
             if (lockOutController != NULL) {
                 NSLog(@"Triggering device lockout due to too many failed attempts");
                 [lockOutController temporaryBlockStatusChanged];
@@ -64,13 +87,17 @@ BOOL doUnlock(NSString *passcode) {
     }
 }
 
-%group FakePassUIKit
-
 %hook DevicePINController
 - (int)pinLength {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    if (creatingPasscode) {
+        %log(@"passcode is being created, ignoring");
+        return %orig;
+    }
+    %log(@"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
     int length;
@@ -91,61 +118,139 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)isNumericPIN {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
-
-    int passcodeType = [prefs integerForKey:@"passcodeType"];
-    BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
-
-    if (forceAlphanumeric) {
-        return NO;
+    if (creatingPasscode) {
+        %log(@"passcode is being created, ignoring");
+        return %orig;
     }
+    %log(@"hooked");
 
-    return passcodeType < 3;
+    return [prefs integerForKey:@"passcodeType"] < 3;
 }
 
 - (BOOL)simplePIN {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    if (creatingPasscode) {
+        %log(@"passcode is being created, ignoring");
+        return %orig;
+    }
+    %log(@"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
-    BOOL hideLength = [prefs boolForKey:@"hideLength"];
-    BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
 
-    if (hideLength || forceAlphanumeric) {
-        return NO;
+    return passcodeType < 2;
+}
+%end
+
+%hook DevicePINPane
+- (void)slideToNewPasscodeField:(BOOL)fixedLength  // false if custom numeric code is selected
+               requiresKeyboard:(BOOL)requiresKeyboard
+                    numericOnly:(BOOL)numericOnly
+                     transition:(BOOL)transition
+             showsOptionsButton:(BOOL)showsOptionsButton {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
+        return %orig;
     }
+    %log(@"hooked");
 
-    return passcodeType < 3;
+    creatingPasscode = YES;
+    %orig;
+}
+%end
+
+%hook LAPasscodeHelper
+- (NSInteger)verifyPasswordUsingAKS:(LASecureData *)secureData
+                         acmContext:(id)acmContext
+                             userId:(unsigned int)userId
+                             policy:(NSInteger)policy
+                            options:(NSDictionary *)options {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
+        return %orig;
+    }
+    %log(@"hooked");
+
+    return checkPasscode([[NSString alloc] initWithData:secureData.data encoding:NSUTF8StringEncoding]) ? 0 : 1;
 }
 %end
 
 %hook MCPasscodeManager
 - (BOOL)isPasscodeSet {
-    if (!isEnabled()) {
-        return %orig;
-    }
-
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
-        NSLog(@"Spoofing passcode state");
-        return YES;
-    }
-
-    return NO;
+    %log(@"hooked");
+    return isPasscodeSet();
 }
 %end
 
 %hook MCProfileConnection
-- (BOOL)unlockDeviceWithPasscode:(id)passcode outError:(id *)error {
-    if (!isEnabled()) {
-        return %orig;
+- (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
+    creatingPasscode = NO;
+
+    prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+
+    if (oldPasscode.length > 0 && !checkPasscode(oldPasscode)) {
+        %log(@"old passcode incorrect");
+        return NO;
     }
 
-    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
+    if (newPasscode.length > 0) {
+        %log(@"got new passcode");
 
-    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
+        NSString *salt = generateSalt();
+        [prefs setObject:generateHashFor(newPasscode, salt) forKey:@"passcodeHash"];
+        [prefs setObject:salt forKey:@"passcodeSalt"];
+
+        NSInteger passcodeType;
+
+        if ([newPasscode rangeOfString:@"^[0-9]+$" options:NSRegularExpressionSearch].location != NSNotFound) {
+            switch (newPasscode.length) {
+                case 4:
+                    passcodeType = 0;
+                    break;
+                case 6:
+                    passcodeType = 1;
+                    break;
+                default:
+                    passcodeType = 2;
+                    break;
+            }
+        } else {
+            passcodeType = 3;
+        }
+
+        [prefs setInteger:passcodeType forKey:@"passcodeType"];
+    } else {
+        %log(@"no new passcode");
+
+        [prefs removeObjectForKey:@"blockTime"];
+        [prefs removeObjectForKey:@"failedAttempts"];
+        [prefs removeObjectForKey:@"passcodeHash"];
+        [prefs removeObjectForKey:@"passcodeSalt"];
+        [prefs removeObjectForKey:@"passcodeType"];
+    }
+
+    if (!oldPasscode) {
+        // respring to work around bug where it's impossible to unlock
+        [HBRespringController respring];
+    }
+
+    return true;
+}
+
+- (BOOL)unlockDeviceWithPasscode:(id)passcode outError:(id *)error {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
+        return %orig;
+    }
+    %log(@"hooked");
+
+    if (checkPasscode(passcode)) {
         NSLog(@"Successful authentication with passcode: %@", passcode);
         return YES;
     } else {
@@ -153,37 +258,59 @@ BOOL doUnlock(NSString *passcode) {
         return NO;
     }
 }
-%end
 
-%hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
-    if (!isEnabled()) {
+- (id)effectiveValueForSetting:(NSString *)setting {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
-    int passcodeType = [prefs integerForKey:@"passcodeType"];
-    BOOL hideLength = [prefs boolForKey:@"hideLength"];
-    BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
+    NSInteger maxGracePeriod = [prefs integerForKey:@"maxGracePeriod" default:-1];
 
-    if (forceAlphanumeric) {
-        return 3;
+    if ([setting isEqualToString:@"maxGracePeriod"] && maxGracePeriod > -1) {
+        return @(maxGracePeriod);
     }
 
-    if (passcodeType < 2 && hideLength) {
-        return 2;
-    }
-
-    return passcodeType;
+    return %orig;
 }
 
-%end
-
-%group FakePassSB
-
-%hook SBBacklightController
-- (void) _startFadeOutAnimationFromLockSource:(int)arg1 {
-    if (!isEnabled()) {
+- (void)setValue:(id)value forSetting:(NSString *)setting passcode:(id)passcode {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
+
+    if ([setting isEqualToString:@"maxGracePeriod"]) {
+        [prefs setInteger:[value integerValue] forKey:@"maxGracePeriod"];
+    }
+
+    %orig;
+}
+%end
+
+%hook NSBundle
+- (NSString *)localizedStringForKey:(NSString *)key value:(NSString *)value table:(NSString *)tableName {
+    NSString *ret = %orig;
+
+    if ([self.bundleIdentifier isEqualToString:@"com.apple.preferences-ui-framework"]
+            && [tableName isEqualToString:@"Passcode Lock"]
+            && [key isEqualToString:@"PASSCODE_ON"]) {
+        return [NSString stringWithFormat:@"%@ (FakePass)", ret];
+    }
+
+    return ret;
+}
+%end
+
+%hook SBBacklightController
+- (void)_startFadeOutAnimationFromLockSource:(int)arg1 {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
+        return %orig;
+    }
+    %log(@"hooked");
 
     if (isUnlocked) {
         [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
@@ -194,9 +321,11 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBDoubleClickSleepWakeHardwareButtonInteraction
 - (void)_performSleep {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
     if (isUnlocked) {
         [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
@@ -207,65 +336,97 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBFDeviceBlockTimer
 - (NSString *)subtitleText {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
     int failedAttempts = [prefs integerForKey:@"failedAttempts"];
     NSTimeInterval blockTime = [prefs integerForKey:@"blockTime"];
     NSTimeInterval now = [NSDate date].timeIntervalSince1970;
     NSTimeInterval lockoutTime;
 
-    if (failedAttempts <= 10) {
-        if (failedAttempts >= 10) {
-            lockoutTime = 3600;
-        } else if (failedAttempts >= 8) {
-            lockoutTime = 900;
-        } else if (failedAttempts >= 7) {
-            lockoutTime = 300;
-        } else if (failedAttempts >= 6) {
-            lockoutTime = 60;
-        } else {
-            return %orig;
-        }
+    if (failedAttempts >= 10) {
+        lockoutTime = 3600;
+    } else if (failedAttempts >= 8) {
+        lockoutTime = 900;
+    } else if (failedAttempts >= 7) {
+        lockoutTime = 300;
+    } else if (failedAttempts >= 6) {
+        lockoutTime = 60;
     } else {
         return %orig;
     }
 
     NSTimeInterval remainingSecs = (blockTime + lockoutTime) - now;
-    int remainingMins = ceil(remainingSecs / 60);
-    NSString *s = (remainingMins == 1) ? @"" : @"s";
 
-    return [NSString stringWithFormat:@"try again in %d minute%@", remainingMins, s];
+    NSDateComponents *dateComponents = [NSDateComponents new];
+    dateComponents.minute = ceil(remainingSecs / 60);
+
+    if (failedAttempts <= 10) {
+        NSString *localizedString = NSLocalizedStringFromTableInBundle(
+            @"TRY_AGAIN_AFTER_TIMEOUT",
+            @"DeviceBlock",
+            [NSBundle bundleWithIdentifier:@"com.apple.SpringBoardFoundation"],
+            nil
+        );
+        NSString *time = [
+            NSDateComponentsFormatter localizedStringFromDateComponents:dateComponents
+                                                             unitsStyle:NSDateComponentsFormatterUnitsStyleFull
+        ];
+        return [NSString stringWithFormat:localizedString, time];
+    } else {
+        return NSLocalizedStringFromTableInBundle(
+            @"CONNECT_TO_ITUNES",
+            @"DeviceBlock",
+            [NSBundle bundleWithIdentifier:@"com.apple.SpringBoardFoundation"],
+            nil
+        );
+    }
 }
 %end
 
 %hook SBFDeviceLockOutController
-- (id)initWithThermalController:(id)arg1 authenticationController:(id)arg2 {
-    if (!isEnabled()) {
-        return %orig;
-    }
-
-    lockOutController = self;
-    return %orig;
-}
-
 - (BOOL)isPermanentlyBlocked {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
+    //%log(@"hooked");
 
-    return [prefs integerForKey:@"failedAttempts"] > 10;
+    BOOL ret = [prefs integerForKey:@"failedAttempts"] > 10;
+
+    if (ret && !isResetting) {
+        HBPreferences *sbPrefs = [[HBPreferences alloc] initWithIdentifier:@"com.apple.springboard"];
+
+        if ([sbPrefs boolForKey:@"SBDeviceWipeEnabled"]) {
+            void *UIKit = dlopen("/System/Library/Framework/UIKit.framework/UIKit", RTLD_LAZY);
+            mach_port_t *(*SBSSpringBoardServerPort)() = (mach_port_t * (*)()) dlsym(UIKit, "SBSSpringBoardServerPort");
+
+            void *SpringBoardServices = dlopen(
+                "/System/Library/PrivateFrameworks/SpringBoardServices.framework/SpringBoardServices", RTLD_LAZY
+            );
+            int (*SBDataReset)(mach_port_t* port, int wipeMode) = (
+                (int (*)(mach_port_t *, int)) dlsym(SpringBoardServices, "SBDataReset")
+            );
+
+            isResetting = YES;
+            SBDataReset(SBSSpringBoardServerPort(), 5);
+            // respring seems to be needed to kickstart the process
+            [HBRespringController respring];
+        }
+    }
+
+    return ret;
 }
 
 - (BOOL)isTemporarilyBlocked {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
-
-    if (![prefs boolForKey:@"blockAfterTooManyFailures"]) {
-        return NO;
-    }
+    //%log(@"hooked");
 
     NSTimeInterval blockTime = [prefs integerForKey:@"blockTime"];
     NSTimeInterval now = [NSDate date].timeIntervalSince1970;
@@ -294,28 +455,34 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBFMobileKeyBag
 // iOS 14
 - (BOOL)unlockWithPasscode:(NSString *)passcode error:(id *)error {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
     return doUnlock(passcode);
 }
 
 // iOS 15
 - (BOOL)unlockWithOptions:(SBFMobileKeyBagUnlockOptions *)options error:(id *)error {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
-    return doUnlock([[NSString alloc] initWithData:[options passcode] encoding:NSUTF8StringEncoding]);
+    return doUnlock([[NSString alloc] initWithData:options.passcode encoding:NSUTF8StringEncoding]);
 }
 %end
 
 %hook SBFMobileKeyBagState
 - (NSInteger)lockState {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
     return isUnlocked ? 0 : 2;
 }
@@ -323,31 +490,44 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBFUserAuthenticationController
 - (BOOL)isAuthenticated {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
+    //%log(@"hooked");
 
     return isUnlocked;
 }
 
 - (BOOL)isAuthenticatedCached {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
+    //%log(@"hooked");
 
     return isUnlocked;
 }
 %end
 
+%hook SBCoverSheetSystemGesturesDelegate
+- (id)dismissGestureRecognizer {
+    //%log(@"hooked");
+    return %orig;
+}
+%end
+
 %hook SBLockScreenManager
 - (void)lockUIFromSource:(int)source withOptions:(id)options {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
     NSLog(@"Screen locked from source: %d", source);
 
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
+    if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         NSLog(@"Locking device");
         isUnlocked = NO;
         lastLockTime = [NSDate date].timeIntervalSince1970;
@@ -357,27 +537,19 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (void)unlockUIFromSource:(int)source withOptions:(id)options {
-    if (!isEnabled() || source == 24) {
-        // 24 = Screen already unlocked, swiping up on the lock screen
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
     NSLog(@"Screen unlocked from source: %d", source);
 
-    if (lockOutController != NULL) {
-        NSLog(@"Clearing device lockout");
-        int blockTime = [prefs integerForKey:@"blockTime"];
-        [prefs removeObjectForKey:@"blockTime"];
-        [lockOutController temporaryBlockStatusChanged];
-        [prefs setInteger:blockTime forKey:@"blockTime"];
-        [lockOutController temporaryBlockStatusChanged];
-    }
-
     if (!isUnlocked) {
-        NSTimeInterval lockAfter = [prefs integerForKey:@"lockAfter"];
+        NSTimeInterval maxGracePeriod = [prefs integerForKey:@"maxGracePeriod"];
         NSTimeInterval now = [NSDate date].timeIntervalSince1970;
 
-        if (lastLockTime > 0 && lockAfter > 0 && lastLockTime + (lockAfter * 60) > now) {
+        if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + maxGracePeriod > now) {
             NSLog(@"Unlocking due to grace period");
             isUnlocked = YES;
         }
@@ -389,11 +561,13 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBMainWorkspace
 - (void)dismissPowerDownTransientOverlayWithCompletion:(id)arg1 {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
+    if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         if (isUnlocked) {
             [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
         }
@@ -404,14 +578,32 @@ BOOL doUnlock(NSString *passcode) {
     %orig;
 }
 %end
+
+%hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
+    if (!isPasscodeSet()) {
+        NSLog(@"SBUICurrentPasscodeStyleForUser: no passcode set, ignoring");
+        return %orig;
+    }
+
+    if (creatingPasscode) {
+        NSLog(@"SBUICurrentPasscodeStyleForUser: passcode is being created, ignoring");
+        return %orig;
+    }
+
+    NSLog(@"SBUICurrentPasscodeStyleForUser: hooked");
+
+    return [prefs integerForKey:@"passcodeType"];
+}
 
 %hook SOSManager
 - (void)didDismissClientSOSBeforeSOSCall:(id)arg1 {
-    if (!isEnabled()) {
+    if (!isPasscodeSet()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
+    %log(@"hooked");
 
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
+    if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         if (isUnlocked) {
             [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
         }
@@ -421,45 +613,38 @@ BOOL doUnlock(NSString *passcode) {
 
     %orig;
 }
-%end
-
 %end
 
 %ctor {
     @autoreleasepool {
         NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
+        NSString *bundlePath = [NSBundle mainBundle].bundlePath;
 
-        NSLog(@"Injected into %@", bundleId);
+        NSArray *daemonAllowlist = @[
+            @"com.apple.coreauthd",
+        ];
 
-        /*if ([bundleId isEqualToString:@"com.apple.Spotlight"]) {
-            // Workaround for safe mode glitch
+        // skip injection into problematic processes
+        if (!bundleId || ([bundleId hasPrefix:@"com.apple."]
+                          && ![bundlePath hasSuffix:@".app"]
+                          && ![daemonAllowlist containsObject:bundleId])) {
             return;
-        }*/
+        }
+
+        NSLog(@"Injected into %@ (%@)", bundleId, bundlePath);
 
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{
-            @"enabled": @YES,
             @"lockOnRespring": @YES,
-            @"hideLength": @NO,
-            @"forceAlphanumeric": @NO,
-            @"blockAfterTooManyFailures": @YES,
-            @"lockAfter": @0,
+            @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],
         }];
 
-        if (!isEnabled()) {
-            return;
-        }
+        isUnlocked = !isPasscodeSet() || ![prefs boolForKey:@"lockOnRespring"];
 
-        isUnlocked = ((NSString *)[prefs objectForKey:@"passcodeHash"]).length == 0 || ![prefs boolForKey:@"lockOnRespring"];
-
-        NSLog(@"Loading FakePassUIKit");
-        void *handle = dlopen("/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY);
-        %init(FakePassUIKit, SBUICurrentPasscodeStyleForUser = dlsym(handle, "SBUICurrentPasscodeStyleForUser"));
-
-        if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
-            NSLog(@"Loading FakePassSB");
-            %init(FakePassSB);
-        }
+        void *SpringBoardUIServices = dlopen(
+            "/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY
+        );
+        %init(SBUICurrentPasscodeStyleForUser = dlsym(SpringBoardUIServices, "SBUICurrentPasscodeStyleForUser"));
     }
 }

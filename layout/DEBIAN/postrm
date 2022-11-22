@@ -1,0 +1,6 @@
+#!/bin/sh
+
+if [ "$1" = "remove" ]; then
+    rm -f /var/mobile/Library/Preferences/net.cadoth.fakepass.plist
+    killall -9 cfprefsd 2>/dev/null || true
+fi

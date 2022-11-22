@@ -1,2 +1,3 @@
 #!/bin/sh
+
 killall -9 coreauthd || true

@@ -429,6 +429,11 @@ BOOL doUnlock(NSString *passcode) {
     @autoreleasepool {
         NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
 
+        if ([bundleId isEqualToString:@"com.apple.coreauthd"]) {
+            // TODO: Figure out how to make coreauthd passcode prompt accept our passcode
+            return;
+        }
+
         NSLog(@"Injected into %@", bundleId);
 
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];

@@ -431,11 +431,6 @@ BOOL doUnlock(NSString *passcode) {
 
         NSLog(@"Injected into %@", bundleId);
 
-        /*if ([bundleId isEqualToString:@"com.apple.Spotlight"]) {
-            // Workaround for safe mode glitch
-            return;
-        }*/
-
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{

@@ -1,4 +1,3 @@
 { Filter = {
-    Bundles = ( "com.apple.UIKit" );
-    //Executables = ( "coreauthd" );
+    Classes = ( "MCProfileConnection" );
 }; }

@@ -38,13 +38,21 @@ int lastLockTime = 0;
 __weak SBFDeviceLockOutController *lockOutController = NULL;
 
 BOOL isEnabled() {
-    return [prefs boolForKey:@"enabled"] && [[prefs objectForKey:@"passcodeHash"] length] > 0;
+    return [prefs boolForKey:@"enabled"];
+}
+
+BOOL isPasscodeEnabled() {
+    return isEnabled() && [[prefs objectForKey:@"passcodeHash"] length] > 0;
+}
+
+BOOL checkPasscode(NSString *passcode) {
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
+    return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
 }
 
 BOOL doUnlock(NSString *passcode) {
-    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
-
-    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
+    if (checkPasscode(passcode)) {
         NSLog(@"Successful unlock with passcode: %@", passcode);
         isUnlocked = YES;
         [prefs setInteger:0 forKey:@"failedAttempts"];
@@ -72,6 +80,8 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
+    %log;
+
     int passcodeType = [prefs integerForKey:@"passcodeType"];
     int length;
 
@@ -95,6 +105,8 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
+    %log;
+
     int passcodeType = [prefs integerForKey:@"passcodeType"];
     BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
 
@@ -109,6 +121,8 @@ BOOL doUnlock(NSString *passcode) {
     if (!isEnabled()) {
         return %orig;
     }
+
+    %log;
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
     BOOL hideLength = [prefs boolForKey:@"hideLength"];
@@ -128,8 +142,10 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
+    %log;
+
     if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
-        NSLog(@"Spoofing passcode state");
+        %log(@"Spoofing passcode state");
         return YES;
     }
 
@@ -143,9 +159,7 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
-    NSString *salt = [prefs objectForKey:@"passcodeSalt"];
-
-    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
+    if (checkPasscode(passcode)) {
         NSLog(@"Successful authentication with passcode: %@", passcode);
         return YES;
     } else {
@@ -153,6 +167,56 @@ BOOL doUnlock(NSString *passcode) {
         return NO;
     }
 }
+
+- (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
+    %log;
+
+    if (!isEnabled()) {
+        return %orig;
+    }
+
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+
+    if (!checkPasscode(oldPasscode)) {
+        return NO;
+    }
+
+    if (newPasscode.length > 0) {
+        NSString *salt = generateSalt();
+        [prefs setObject:generateHashFor(newPasscode, salt) forKey:@"passcodeHash"];
+        [prefs setObject:salt forKey:@"passcodeSalt"];
+
+        [prefs removeObjectForKey:@"passcode"];
+
+        NSInteger passcodeType;
+
+        if ([newPasscode rangeOfString:@"^\\d+$" options:NSRegularExpressionSearch].location != NSNotFound) {
+            switch (newPasscode.length) {
+                case 4:
+                    passcodeType = 0;
+                    break;
+                case 6:
+                    passcodeType = 1;
+                    break;
+                default:
+                    passcodeType = 2;
+                    break;
+            }
+        } else {
+            passcodeType = 3;
+        }
+
+        [prefs setInteger:passcodeType forKey:@"passcodeType"];
+    } else {
+        [prefs removeObjectForKey:@"passcode"];
+        [prefs removeObjectForKey:@"passcodeHash"];
+        [prefs removeObjectForKey:@"passcodeSalt"];
+        [prefs removeObjectForKey:@"passcodeType"];
+    }
+
+    return true;
+}
+
 %end
 
 %hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {

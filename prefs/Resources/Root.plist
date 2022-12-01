@@ -22,24 +22,6 @@
             <key>cell</key>
             <string>PSGroupCell</string>
             <key>label</key>
-            <string>Settings</string>
-        </dict>
-        <dict>
-            <key>cell</key>
-            <string>PSSecureEditTextCell</string>
-            <key>defaults</key>
-            <string>net.cadoth.fakepass</string>
-            <key>key</key>
-            <string>passcode</string>
-            <key>label</key>
-            <string>Passcode</string>
-            <key>PostNotification</key>
-            <string>net.cadoth.fakepass/ReloadPrefs</string>
-        </dict>
-        <dict>
-            <key>cell</key>
-            <string>PSGroupCell</string>
-            <key>label</key>
             <string>Security</string>
         </dict>
         <dict>

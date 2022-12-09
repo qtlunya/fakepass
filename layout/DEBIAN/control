@@ -3,7 +3,7 @@ Name: FakePass
 Version: 0.1.0
 Architecture: iphoneos-arm
 Description: Fake passcode for checkra1n on A11 devices running iOS 14+
-Maintainer: nyuszika7h <nyuszika7h@gmail.com>
-Author: nyuszika7h <nyuszika7h@gmail.com>
+Maintainer: alexia <nyuszika7h@gmail.com>
+Author: alexia <nyuszika7h@gmail.com>
 Section: Tweaks
 Depends: cy+cpu.arm64, firmware (>= 14.0), mobilesubstrate (>= 0.9.5000), preferenceloader, ws.hbang.common (>= 1.14)

@@ -99,10 +99,11 @@ BOOL doUnlock(NSString *passcode) {
 
 - (BOOL)isNumericPIN {
     if (!isPasscodeEnabled()) {
+        %log(@"no passcode set, ignoring");
         return %orig;
     }
 
-    %log;
+    %log(@"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
     BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
@@ -166,15 +167,20 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
-    %log(@"hooked");
+    NSLog(@"hooked");
+    NSLog(@"hello???");
+    NSLog(@"test2");
 
     HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
 
     if (oldPasscode.length > 0 && !checkPasscode(oldPasscode)) {
+        %log(@"old passcode incorrect");
         return NO;
     }
 
     if (newPasscode.length > 0) {
+        %log(@"got new passcode");
+
         NSString *salt = generateSalt();
         [prefs setObject:generateHashFor(newPasscode, salt) forKey:@"passcodeHash"];
         [prefs setObject:salt forKey:@"passcodeSalt"];
@@ -199,6 +205,8 @@ BOOL doUnlock(NSString *passcode) {
 
         [prefs setInteger:passcodeType forKey:@"passcodeType"];
     } else {
+        %log(@"no new passcode");
+
         [prefs removeObjectForKey:@"passcodeHash"];
         [prefs removeObjectForKey:@"passcodeSalt"];
         [prefs removeObjectForKey:@"passcodeType"];

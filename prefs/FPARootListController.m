@@ -11,7 +11,6 @@
 
 - (void)reloadPrefs {
     NSLog(@"reloadPrefs called");
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("me.alexia.fakepass/ReloadPrefs"), NULL, NULL, YES);
 }
 

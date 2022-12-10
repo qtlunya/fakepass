@@ -459,8 +459,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (void)unlockUIFromSource:(int)source withOptions:(id)options {
-    if (!isPasscodeEnabled()/* || source == 24*/) {
-        // 24 = screen already unlocked, swiping up on the lock screen
+    if (!isPasscodeEnabled()) {
         %log(@"no passcode set, ignoring");
         return %orig;
     }

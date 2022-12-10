@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>FakePassPrefs</string>
     <key>CFBundleIdentifier</key>
-    <string>net.cadoth.fakepass.prefs</string>
+    <string>me.alexia.fakepass.prefs</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundlePackageType</key>

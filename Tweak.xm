@@ -42,7 +42,7 @@ BOOL isPasscodeEnabled() {
 }
 
 BOOL checkPasscode(NSString *passcode) {
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
     NSString *salt = [prefs objectForKey:@"passcodeSalt"];
     return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
 }
@@ -167,7 +167,7 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
     %log;
 
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
 
     if (!checkPasscode(oldPasscode)) {
         return NO;
@@ -492,7 +492,7 @@ BOOL doUnlock(NSString *passcode) {
 
         NSLog(@"Injected into %@", bundleId);
 
-        prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+        prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
 
         [prefs registerDefaults:@{
             @"lockOnRespring": @YES,

@@ -11,10 +11,10 @@
 
 - (void)reloadPrefs {
     NSLog(@"reloadPrefs called");
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
     NSLog(@"Passcode: %@", [prefs objectForKey:@"passcode"]);
     [self reloadSpecifierID:@"passcode"];
-    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("net.cadoth.fakepass/ReloadPrefs"), NULL, NULL, YES);
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("me.alexia.fakepass/ReloadPrefs"), NULL, NULL, YES);
 }
 
 - (NSArray *)specifiers {
@@ -35,7 +35,7 @@
 }
 
 - (void)respring {
-    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("net.cadoth.fakepass/Respring"), NULL, NULL, YES);
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("me.alexia.fakepass/Respring"), NULL, NULL, YES);
 }
 
 - (void)respringPrompt {

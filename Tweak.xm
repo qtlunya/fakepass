@@ -140,7 +140,7 @@ BOOL doUnlock(NSString *passcode) {
 %end
 
 %hook DevicePINPane
-- (void)slideToNewPasscodeField:(BOOL)fixedLength
+- (void)slideToNewPasscodeField:(BOOL)fixedLength  // false if custom numeric code is selected0
                requiresKeyboard:(BOOL)requiresKeyboard
                     numericOnly:(BOOL)numericOnly
                      transition:(BOOL)transition
@@ -442,17 +442,6 @@ BOOL doUnlock(NSString *passcode) {
     %log(@"hooked");
 
     return isUnlocked;
-}
-
-- (BOOL)_hasBeenAuthenticatedOnceSinceBoot {
-    if (!isPasscodeEnabled()) {
-        %log(@"no passcode set, ignoring");
-        return %orig;
-    }
-
-    %log(@"hooked");
-
-    return YES;
 }
 %end
 

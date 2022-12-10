@@ -23,7 +23,7 @@
 @end
 
 @interface SBFMobileKeyBagUnlockOptions : NSObject
-@property (nonatomic,copy,readonly) NSData * passcode;
+@property (nonatomic,copy,readonly) NSData *passcode;
 @end
 
 @interface SBLockScreenManager
@@ -422,7 +422,7 @@ BOOL doUnlock(NSString *passcode) {
 
 - (void)unlockUIFromSource:(int)source withOptions:(id)options {
     if (!isEnabled() || source == 24) {
-        // 24 = Screen already unlocked, swiping up on the lock screen
+        // 24 = screen already unlocked, swiping up on the lock screen
         return %orig;
     }
 

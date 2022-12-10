@@ -442,6 +442,17 @@ BOOL doUnlock(NSString *passcode) {
 
     return isUnlocked;
 }
+
+- (BOOL)_hasBeenAuthenticatedOnceSinceBoot {
+    if (!isPasscodeEnabled()) {
+        %log(@"no passcode set, ignoring");
+        return %orig;
+    }
+
+    %log(@"hooked");
+
+    return YES;
+}
 %end
 
 %hook SBLockScreenManager

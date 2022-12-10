@@ -140,7 +140,7 @@ BOOL doUnlock(NSString *passcode) {
 %end
 
 %hook DevicePINPane
-- (void)slideToNewPasscodeField:(BOOL)fixedLength  // false if custom numeric code is selected0
+- (void)slideToNewPasscodeField:(BOOL)fixedLength  // false if custom numeric code is selected
                requiresKeyboard:(BOOL)requiresKeyboard
                     numericOnly:(BOOL)numericOnly
                      transition:(BOOL)transition

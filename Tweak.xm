@@ -35,6 +35,7 @@
 HBPreferences *prefs;
 BOOL isUnlocked;
 BOOL didStartBlock = NO;
+BOOL creatingPasscode = NO;
 int lastLockTime = 0;
 __weak SBFDeviceLockOutController *lockOutController = NULL;
 
@@ -78,6 +79,11 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
+    if (creatingPasscode) {
+        %log(@"passcode is being created, ignoring");
+        return %orig;
+    }
+
     %log(@"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
@@ -104,6 +110,11 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
+    if (creatingPasscode) {
+        %log(@"passcode is being created, ignoring");
+        return %orig;
+    }
+
     %log(@"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
@@ -122,6 +133,11 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
+    if (creatingPasscode) {
+        %log(@"passcode is being created, ignoring");
+        return %orig;
+    }
+
     %log(@"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
@@ -133,6 +149,15 @@ BOOL doUnlock(NSString *passcode) {
     }
 
     return passcodeType < 3;
+}
+%end
+
+%hook DevicePINPane
+- (void)slideToNewPasscodeField:(BOOL)arg1 requiresKeyboard:(BOOL)arg2 numericOnly:(BOOL)arg3 transition:(BOOL)arg4 showsOptionsButton:(BOOL)arg5 {
+    if (arg1) {
+        creatingPasscode = YES;
+    }
+    %orig;
 }
 %end
 
@@ -168,9 +193,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
-    NSLog(@"hooked");
-    NSLog(@"hello???");
-    NSLog(@"test2");
+    creatingPasscode = NO;
 
     HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
 
@@ -226,6 +249,11 @@ BOOL doUnlock(NSString *passcode) {
 %hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
     if (!isPasscodeEnabled()) {
         NSLog(@"SBUICurrentPasscodeStyleForUser: no passcode set, ignoring");
+        return %orig;
+    }
+
+    if (creatingPasscode) {
+        NSLog(@"SBUICurrentPasscodeStyleForUser: passcode is being created, ignoring");
         return %orig;
     }
 

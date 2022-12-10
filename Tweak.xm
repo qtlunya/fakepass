@@ -134,10 +134,6 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook MCPasscodeManager
 - (BOOL)isPasscodeSet {
-    if (!isPasscodeEnabled()) {
-        return %orig;
-    }
-
     %log;
 
     if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
@@ -169,7 +165,7 @@ BOOL doUnlock(NSString *passcode) {
 
     HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
 
-    if (!checkPasscode(oldPasscode)) {
+    if (oldPasscode.length > 0 && !checkPasscode(oldPasscode)) {
         return NO;
     }
 
@@ -177,8 +173,6 @@ BOOL doUnlock(NSString *passcode) {
         NSString *salt = generateSalt();
         [prefs setObject:generateHashFor(newPasscode, salt) forKey:@"passcodeHash"];
         [prefs setObject:salt forKey:@"passcodeSalt"];
-
-        [prefs removeObjectForKey:@"passcode"];
 
         NSInteger passcodeType;
 
@@ -200,7 +194,6 @@ BOOL doUnlock(NSString *passcode) {
 
         [prefs setInteger:passcodeType forKey:@"passcodeType"];
     } else {
-        [prefs removeObjectForKey:@"passcode"];
         [prefs removeObjectForKey:@"passcodeHash"];
         [prefs removeObjectForKey:@"passcodeSalt"];
         [prefs removeObjectForKey:@"passcodeType"];

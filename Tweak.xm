@@ -59,7 +59,7 @@ BOOL doUnlock(NSString *passcode) {
         NSLog(@"Failed unlock with passcode: %@", passcode);
         int failedAttempts = [prefs integerForKey:@"failedAttempts"] + 1;
         [prefs setInteger:failedAttempts forKey:@"failedAttempts"];
-        if (failedAttempts >= 6 && [prefs boolForKey:@"blockAfterTooManyFailures"]) {
+        if (failedAttempts >= 6) {
             [prefs setInteger:[NSDate date].timeIntervalSince1970 forKey:@"blockTime"];
             if (lockOutController != NULL) {
                 NSLog(@"Triggering device lockout due to too many failed attempts");
@@ -358,10 +358,6 @@ BOOL doUnlock(NSString *passcode) {
 
     %log(@"hooked");
 
-    if (![prefs boolForKey:@"blockAfterTooManyFailures"]) {
-        return NO;
-    }
-
     NSTimeInterval blockTime = [prefs integerForKey:@"blockTime"];
     NSTimeInterval now = [NSDate date].timeIntervalSince1970;
 
@@ -573,7 +569,6 @@ BOOL doUnlock(NSString *passcode) {
 
         [prefs registerDefaults:@{
             @"lockOnRespring": @YES,
-            @"blockAfterTooManyFailures": @YES,
             @"lockAfter": @0,
         }];
 

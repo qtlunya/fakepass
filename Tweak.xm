@@ -11,6 +11,7 @@
 #import <SpringBoardServices/SBSRelaunchAction.h>
 
 #import <Cephei/HBPreferences.h>
+#import <Cephei/HBRespringController.h>
 
 #import "util.h"
 
@@ -210,6 +211,11 @@ BOOL doUnlock(NSString *passcode) {
         [prefs removeObjectForKey:@"passcodeHash"];
         [prefs removeObjectForKey:@"passcodeSalt"];
         [prefs removeObjectForKey:@"passcodeType"];
+    }
+
+    if (!oldPasscode) {
+        // respring to work around bug where it's impossible to unlock
+        [HBRespringController respring];
     }
 
     return true;
@@ -459,7 +465,8 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (void)unlockUIFromSource:(int)source withOptions:(id)options {
-    if (!isPasscodeEnabled()) {
+    if (!isPasscodeEnabled()/* || source == 24*/) {
+        // 24 = screen already unlocked, swiping up on the lock screen
         %log(@"no passcode set, ignoring");
         return %orig;
     }

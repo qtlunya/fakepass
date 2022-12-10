@@ -32,34 +32,6 @@
             <key>defaults</key>
             <string>me.alexia.fakepass</string>
             <key>key</key>
-            <string>hideLength</string>
-            <key>label</key>
-            <string>Hide passcode length</string>
-            <key>default</key>
-            <false/>
-            <key>PostNotification</key>
-            <string>me.alexia.fakepass/ReloadPrefs</string>
-        </dict>
-        <dict>
-            <key>cell</key>
-            <string>PSSwitchCell</string>
-            <key>defaults</key>
-            <string>me.alexia.fakepass</string>
-            <key>key</key>
-            <string>forceAlphanumeric</string>
-            <key>label</key>
-            <string>Force alphanumeric input</string>
-            <key>default</key>
-            <false/>
-            <key>PostNotification</key>
-            <string>me.alexia.fakepass/ReloadPrefs</string>
-        </dict>
-        <dict>
-            <key>cell</key>
-            <string>PSSwitchCell</string>
-            <key>defaults</key>
-            <string>me.alexia.fakepass</string>
-            <key>key</key>
             <string>blockAfterTooManyFailures</string>
             <key>label</key>
             <string>Block device after too many failed attempts</string>

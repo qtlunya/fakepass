@@ -117,14 +117,7 @@ BOOL doUnlock(NSString *passcode) {
 
     %log(@"hooked");
 
-    int passcodeType = [prefs integerForKey:@"passcodeType"];
-    BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
-
-    if (forceAlphanumeric) {
-        return NO;
-    }
-
-    return passcodeType < 3;
+    return [prefs integerForKey:@"passcodeType"] < 3;
 }
 
 - (BOOL)simplePIN {
@@ -141,22 +134,18 @@ BOOL doUnlock(NSString *passcode) {
     %log(@"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
-    BOOL hideLength = [prefs boolForKey:@"hideLength"];
-    BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
-
-    if (hideLength || forceAlphanumeric) {
-        return NO;
-    }
 
     return passcodeType < 3;
 }
 %end
 
 %hook DevicePINPane
-- (void)slideToNewPasscodeField:(BOOL)arg1 requiresKeyboard:(BOOL)arg2 numericOnly:(BOOL)arg3 transition:(BOOL)arg4 showsOptionsButton:(BOOL)arg5 {
-    if (arg1) {
-        creatingPasscode = YES;
-    }
+- (void)slideToNewPasscodeField:(BOOL)fixedLength
+               requiresKeyboard:(BOOL)requiresKeyboard
+                    numericOnly:(BOOL)numericOnly
+                     transition:(BOOL)transition
+             showsOptionsButton:(BOOL)showsOptionsButton {
+    creatingPasscode = YES;
     %orig;
 }
 %end
@@ -259,19 +248,7 @@ BOOL doUnlock(NSString *passcode) {
 
     NSLog(@"SBUICurrentPasscodeStyleForUser: hooked");
 
-    int passcodeType = [prefs integerForKey:@"passcodeType"];
-    BOOL hideLength = [prefs boolForKey:@"hideLength"];
-    BOOL forceAlphanumeric = [prefs boolForKey:@"forceAlphanumeric"];
-
-    if (forceAlphanumeric) {
-        return 3;
-    }
-
-    if (passcodeType < 2 && hideLength) {
-        return 2;
-    }
-
-    return passcodeType;
+    return [prefs integerForKey:@"passcodeType"];
 }
 
 %end
@@ -596,8 +573,6 @@ BOOL doUnlock(NSString *passcode) {
 
         [prefs registerDefaults:@{
             @"lockOnRespring": @YES,
-            @"hideLength": @NO,
-            @"forceAlphanumeric": @NO,
             @"blockAfterTooManyFailures": @YES,
             @"lockAfter": @0,
         }];

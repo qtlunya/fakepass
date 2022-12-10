@@ -37,12 +37,8 @@ BOOL didStartBlock = NO;
 int lastLockTime = 0;
 __weak SBFDeviceLockOutController *lockOutController = NULL;
 
-BOOL isEnabled() {
-    return [prefs boolForKey:@"enabled"];
-}
-
 BOOL isPasscodeEnabled() {
-    return isEnabled() && [[prefs objectForKey:@"passcodeHash"] length] > 0;
+    return [[prefs objectForKey:@"passcodeHash"] length] > 0;
 }
 
 BOOL checkPasscode(NSString *passcode) {
@@ -76,7 +72,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook DevicePINController
 - (int)pinLength {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -101,7 +97,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)isNumericPIN {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -118,7 +114,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)simplePIN {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -138,7 +134,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook MCPasscodeManager
 - (BOOL)isPasscodeSet {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -155,7 +151,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook MCProfileConnection
 - (BOOL)unlockDeviceWithPasscode:(id)passcode outError:(id *)error {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -170,10 +166,6 @@ BOOL doUnlock(NSString *passcode) {
 
 - (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
     %log;
-
-    if (!isEnabled()) {
-        return %orig;
-    }
 
     HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
@@ -220,7 +212,7 @@ BOOL doUnlock(NSString *passcode) {
 %end
 
 %hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -245,7 +237,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBBacklightController
 - (void) _startFadeOutAnimationFromLockSource:(int)arg1 {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -258,7 +250,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBDoubleClickSleepWakeHardwareButtonInteraction
 - (void)_performSleep {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -271,7 +263,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBFDeviceBlockTimer
 - (NSString *)subtitleText {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -306,7 +298,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBFDeviceLockOutController
 - (id)initWithThermalController:(id)arg1 authenticationController:(id)arg2 {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -315,7 +307,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)isPermanentlyBlocked {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -323,7 +315,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)isTemporarilyBlocked {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -358,7 +350,7 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBFMobileKeyBag
 // iOS 14
 - (BOOL)unlockWithPasscode:(NSString *)passcode error:(id *)error {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -367,7 +359,7 @@ BOOL doUnlock(NSString *passcode) {
 
 // iOS 15
 - (BOOL)unlockWithOptions:(SBFMobileKeyBagUnlockOptions *)options error:(id *)error {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -377,7 +369,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBFMobileKeyBagState
 - (NSInteger)lockState {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -387,7 +379,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBFUserAuthenticationController
 - (BOOL)isAuthenticated {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -395,7 +387,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)isAuthenticatedCached {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -405,7 +397,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBLockScreenManager
 - (void)lockUIFromSource:(int)source withOptions:(id)options {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -421,7 +413,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (void)unlockUIFromSource:(int)source withOptions:(id)options {
-    if (!isEnabled() || source == 24) {
+    if (!isPasscodeEnabled() || source == 24) {
         // 24 = screen already unlocked, swiping up on the lock screen
         return %orig;
     }
@@ -453,7 +445,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBMainWorkspace
 - (void)dismissPowerDownTransientOverlayWithCompletion:(id)arg1 {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -471,7 +463,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SOSManager
 - (void)didDismissClientSOSBeforeSOSCall:(id)arg1 {
-    if (!isEnabled()) {
+    if (!isPasscodeEnabled()) {
         return %orig;
     }
 
@@ -503,17 +495,12 @@ BOOL doUnlock(NSString *passcode) {
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{
-            @"enabled": @YES,
             @"lockOnRespring": @YES,
             @"hideLength": @NO,
             @"forceAlphanumeric": @NO,
             @"blockAfterTooManyFailures": @YES,
             @"lockAfter": @0,
         }];
-
-        if (!isEnabled()) {
-            return;
-        }
 
         isUnlocked = ((NSString *)[prefs objectForKey:@"passcodeHash"]).length == 0 || ![prefs boolForKey:@"lockOnRespring"];
 

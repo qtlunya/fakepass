@@ -15,6 +15,11 @@
 
 #import "util.h"
 
+@interface MCProfileConnection
++ (id)sharedConnection;
+- (id)effectiveValueForSetting:(NSString *)setting;
+@end
+
 @interface SBCoverSheetPresentationManager
 + (id)sharedInstance;
 @end
@@ -233,6 +238,25 @@ BOOL doUnlock(NSString *passcode) {
     return true;
 }
 
+- (id)effectiveValueForSetting:(NSString *)setting {
+    NSInteger maxGracePeriod = [prefs integerForKey:@"maxGracePeriod" default:-1];
+
+    if ([setting isEqualToString:@"maxGracePeriod"] && maxGracePeriod > -1) {
+        return @(maxGracePeriod);
+    }
+
+    return %orig;
+}
+
+- (void)setValue:(id)value forSetting:(NSString *)setting passcode:(id)passcode {
+    %log(@"hooked");
+
+    if ([setting isEqualToString:@"maxGracePeriod"]) {
+        [prefs setInteger:[value integerValue] forKey:@"maxGracePeriod"];
+    }
+
+    %orig;
+}
 %end
 
 %hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
@@ -486,10 +510,10 @@ BOOL doUnlock(NSString *passcode) {
     }
 
     if (!isUnlocked) {
-        NSTimeInterval lockAfter = [prefs integerForKey:@"lockAfter"];
+        NSTimeInterval maxGracePeriod = [prefs integerForKey:@"maxGracePeriod"];
         NSTimeInterval now = [NSDate date].timeIntervalSince1970;
 
-        if (lastLockTime > 0 && lockAfter > 0 && lastLockTime + (lockAfter * 60) > now) {
+        if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + (maxGracePeriod * 60) > now) {
             NSLog(@"Unlocking due to grace period");
             isUnlocked = YES;
         }
@@ -562,7 +586,7 @@ BOOL doUnlock(NSString *passcode) {
         prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
 
         [prefs registerDefaults:@{
-            @"lockAfter": @0,
+            @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],
         }];
 
         isUnlocked = [[prefs objectForKey:@"passcodeHash"] length] == 0 || ![prefs boolForKey:@"lockOnRespring"];

@@ -513,7 +513,7 @@ BOOL doUnlock(NSString *passcode) {
         NSTimeInterval maxGracePeriod = [prefs integerForKey:@"maxGracePeriod"];
         NSTimeInterval now = [NSDate date].timeIntervalSince1970;
 
-        if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + (maxGracePeriod * 60) > now) {
+        if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + maxGracePeriod > now) {
             NSLog(@"Unlocking due to grace period");
             isUnlocked = YES;
         }

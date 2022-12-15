@@ -44,7 +44,7 @@
     }
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Confirm respring"
-                                                  message:@"Are you sure you want to respring? This is only required to enable/disable the tweak."
+                                                  message:@"Are you sure you want to respring?"
                                                   preferredStyle:UIAlertControllerStyleAlert];
 
     UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"Respring"

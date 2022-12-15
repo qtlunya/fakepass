@@ -547,6 +547,11 @@ BOOL doUnlock(NSString *passcode) {
     @autoreleasepool {
         NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
 
+        // backboardd seems to hang when restarted if we inject into it
+        if ([bundleId isEqualToString:@"com.apple.backboardd"]) {
+            return;
+        }
+
         // TODO: Figure out how to make coreauthd passcode prompt accept our passcode
         if ([bundleId isEqualToString:@"com.apple.coreauthd"]) {
             return;

@@ -365,22 +365,22 @@ BOOL doUnlock(NSString *passcode) {
 
 - (BOOL)isPermanentlyBlocked {
     if (!isPasscodeEnabled()) {
-        %log(@"no passcode set, ignoring");
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    //%log(@"hooked");
 
     return [prefs integerForKey:@"failedAttempts"] > 10;
 }
 
 - (BOOL)isTemporarilyBlocked {
     if (!isPasscodeEnabled()) {
-        %log(@"no passcode set, ignoring");
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    //%log(@"hooked");
 
     NSTimeInterval blockTime = [prefs integerForKey:@"blockTime"];
     NSTimeInterval now = [NSDate date].timeIntervalSince1970;
@@ -448,22 +448,22 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBFUserAuthenticationController
 - (BOOL)isAuthenticated {
     if (!isPasscodeEnabled()) {
-        %log(@"no passcode set, ignoring");
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    //%log(@"hooked");
 
     return isUnlocked;
 }
 
 - (BOOL)isAuthenticatedCached {
     if (!isPasscodeEnabled()) {
-        %log(@"no passcode set, ignoring");
+        //%log(@"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    //%log(@"hooked");
 
     return isUnlocked;
 }

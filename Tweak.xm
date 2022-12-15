@@ -154,7 +154,7 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)isPasscodeSet {
     %log(@"hooked");
 
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
+    if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         %log(@"Spoofing passcode state");
         return YES;
     }
@@ -456,7 +456,7 @@ BOOL doUnlock(NSString *passcode) {
 
     NSLog(@"Screen locked from source: %d", source);
 
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
+    if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         NSLog(@"Locking device");
         isUnlocked = NO;
         lastLockTime = [NSDate date].timeIntervalSince1970;
@@ -508,7 +508,7 @@ BOOL doUnlock(NSString *passcode) {
 
     %log(@"hooked");
 
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
+    if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         if (isUnlocked) {
             [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
         }
@@ -529,7 +529,7 @@ BOOL doUnlock(NSString *passcode) {
 
     %log(@"hooked");
 
-    if (((NSString *)[prefs objectForKey:@"passcodeHash"]).length > 0) {
+    if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         if (isUnlocked) {
             [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
         }
@@ -562,11 +562,10 @@ BOOL doUnlock(NSString *passcode) {
         prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
 
         [prefs registerDefaults:@{
-            @"lockOnRespring": @YES,
             @"lockAfter": @0,
         }];
 
-        isUnlocked = ((NSString *)[prefs objectForKey:@"passcodeHash"]).length == 0 || ![prefs boolForKey:@"lockOnRespring"];
+        isUnlocked = [[prefs objectForKey:@"passcodeHash"] length] == 0 || ![prefs boolForKey:@"lockOnRespring"];
 
         NSLog(@"Loading FakePassUIKit");
         void *handle = dlopen("/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY);

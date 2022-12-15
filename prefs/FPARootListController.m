@@ -44,16 +44,16 @@
     }
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Confirm respring"
-                                                  message:@"Are you sure you want to respring?"
-                                                  preferredStyle:UIAlertControllerStyleAlert];
+                                                                   message:@"Are you sure you want to respring?"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"Cancel"
+                                                           style:UIAlertActionStyleCancel
+                                                         handler:^(UIAlertAction *action) {}];
 
     UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"Respring"
                                                        style:UIAlertActionStyleDestructive
                                                      handler:^(UIAlertAction *action) { [HBRespringController respringAndReturnTo:relaunchURL]; }];
-
-    UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"Cancel"
-                                                 style:UIAlertActionStyleCancel
-                                                 handler:^(UIAlertAction *action) {}];
 
     [alert addAction:cancelAction];
     [alert addAction:okAction];

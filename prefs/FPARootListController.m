@@ -22,15 +22,6 @@
     return _specifiers;
 }
 
-- (void)loadView {
-    [super loadView];
-    ((UITableView *)[self table]).keyboardDismissMode = UIScrollViewKeyboardDismissModeOnDrag;
-}
-
-- (void)_returnKeyPressed:(id)arg1 {
-    [self.view endEditing:YES];
-}
-
 - (void)respring {
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("me.alexia.fakepass/Respring"), NULL, NULL, YES);
 }

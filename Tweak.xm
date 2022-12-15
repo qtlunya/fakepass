@@ -547,8 +547,8 @@ BOOL doUnlock(NSString *passcode) {
     @autoreleasepool {
         NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
 
+        // TODO: Figure out how to make coreauthd passcode prompt accept our passcode
         if ([bundleId isEqualToString:@"com.apple.coreauthd"]) {
-            // TODO: Figure out how to make coreauthd passcode prompt accept our passcode
             return;
         }
 

@@ -39,6 +39,7 @@
 
 HBPreferences *prefs;
 BOOL isUnlocked;
+BOOL isResetting = NO;
 BOOL didStartBlock = NO;
 BOOL creatingPasscode = NO;
 int lastLockTime = 0;
@@ -371,7 +372,24 @@ BOOL doUnlock(NSString *passcode) {
 
     //%log(@"hooked");
 
-    return [prefs integerForKey:@"failedAttempts"] > 10;
+    BOOL ret = [prefs integerForKey:@"failedAttempts"] > 10;
+
+    if (ret && !isResetting) {
+        HBPreferences *sbPrefs = [[HBPreferences alloc] initWithIdentifier:@"com.apple.springboard"];
+        if ([sbPrefs boolForKey:@"SBDeviceWipeEnabled"]) {
+            void *UIKit = dlopen("/System/Library/Framework/UIKit.framework/UIKit", RTLD_LAZY);
+            mach_port_t *(*SBSSpringBoardServerPort)() = (mach_port_t * (*)()) dlsym(UIKit, "SBSSpringBoardServerPort");
+
+            void *SpringBoardServices = dlopen("/System/Library/PrivateFrameworks/SpringBoardServices.framework/SpringBoardServices", RTLD_LAZY);
+            int (*SBDataReset)(mach_port_t* port, int wipeMode) = (int (*)(mach_port_t *, int)) dlsym(SpringBoardServices, "SBDataReset");
+
+            isResetting = YES;
+            SBDataReset(SBSSpringBoardServerPort(), 5);
+            [HBRespringController respring];
+        }
+    }
+
+    return ret;
 }
 
 - (BOOL)isTemporarilyBlocked {

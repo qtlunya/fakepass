@@ -1,3 +1,3 @@
 { Filter = {
-    Classes = ( "MCProfileConnection" );
+    Bundles = ( "com.apple.springboard", "com.apple.Preferences" );
 }; }

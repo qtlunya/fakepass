@@ -16,7 +16,7 @@
             <key>cell</key>
             <string>PSSwitchCell</string>
             <key>defaults</key>
-            <string>me.alexia.fakepass</string>
+            <string>net.cadoth.fakepass</string>
             <key>key</key>
             <string>lockOnRespring</string>
             <key>label</key>
@@ -24,7 +24,7 @@
             <key>default</key>
             <true/>
             <key>PostNotification</key>
-            <string>me.alexia.fakepass/ReloadPrefs</string>
+            <string>net.cadoth.fakepass/ReloadPrefs</string>
         </dict>
         <dict>
             <key>cell</key>
@@ -36,7 +36,7 @@
             <key>cell</key>
             <string>PSButtonCell</string>
             <key>defaults</key>
-            <string>me.alexia.fakepass</string>
+            <string>net.cadoth.fakepass</string>
             <key>label</key>
             <string>Respring</string>
             <key>action</key>

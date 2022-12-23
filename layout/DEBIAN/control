@@ -1,4 +1,4 @@
-Package: me.alexia.fakepass
+Package: net.cadoth.fakepass
 Name: FakePass
 Version: 0.1.0
 Architecture: iphoneos-arm

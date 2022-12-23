@@ -50,7 +50,7 @@ BOOL isPasscodeEnabled() {
 }
 
 BOOL checkPasscode(NSString *passcode) {
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
     NSString *salt = [prefs objectForKey:@"passcodeSalt"];
     return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
 }
@@ -190,7 +190,7 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
     creatingPasscode = NO;
 
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
     if (oldPasscode.length > 0 && !checkPasscode(oldPasscode)) {
         %log(@"old passcode incorrect");
@@ -601,7 +601,7 @@ BOOL doUnlock(NSString *passcode) {
 
         NSLog(@"Injected into %@", bundleId);
 
-        prefs = [[HBPreferences alloc] initWithIdentifier:@"me.alexia.fakepass"];
+        prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{
             @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],

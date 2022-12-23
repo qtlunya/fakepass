@@ -11,7 +11,7 @@
 
 - (void)reloadPrefs {
     NSLog(@"reloadPrefs called");
-    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("me.alexia.fakepass/ReloadPrefs"), NULL, NULL, YES);
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("net.cadoth.fakepass/ReloadPrefs"), NULL, NULL, YES);
 }
 
 - (NSArray *)specifiers {
@@ -23,7 +23,7 @@
 }
 
 - (void)respring {
-    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("me.alexia.fakepass/Respring"), NULL, NULL, YES);
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("net.cadoth.fakepass/Respring"), NULL, NULL, YES);
 }
 
 - (void)respringPrompt {

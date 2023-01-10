@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>title</key>
+    <string>FakePass</string>
+    <key>items</key>
+    <array>
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string>Security</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSSwitchCell</string>
+            <key>defaults</key>
+            <string>net.cadoth.fakepass</string>
+            <key>key</key>
+            <string>lockOnRespring</string>
+            <key>label</key>
+            <string>Lock after respring</string>
+            <key>default</key>
+            <true/>
+            <key>PostNotification</key>
+            <string>net.cadoth.fakepass/ReloadPrefs</string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSGroupCell</string>
+            <key>label</key>
+            <string></string>
+        </dict>
+        <dict>
+            <key>cell</key>
+            <string>PSButtonCell</string>
+            <key>defaults</key>
+            <string>net.cadoth.fakepass</string>
+            <key>label</key>
+            <string>Respring</string>
+            <key>action</key>
+            <string>respringPrompt</string>
+        </dict>
+    </array>
+</dict>
+</plist>

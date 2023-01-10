@@ -607,7 +607,7 @@ BOOL doUnlock(NSString *passcode) {
             @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],
         }];
 
-        isUnlocked = [[prefs objectForKey:@"passcodeHash"] length] == 0;
+        isUnlocked = [[prefs objectForKey:@"passcodeHash"] length] == 0 || ![prefs boolForKey:@"lockOnRespring"];
 
         NSLog(@"Loading FakePassUIKit");
         void *handle = dlopen("/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY);

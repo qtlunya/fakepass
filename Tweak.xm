@@ -604,6 +604,7 @@ BOOL doUnlock(NSString *passcode) {
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{
+            @"lockOnRespring": YES,
             @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],
         }];
 

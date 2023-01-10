@@ -41,12 +41,6 @@ NS_RETURNS_RETAINED NSString *generateSalt() {
     return salt;
 }
 
-void respring() {
-        SBSRelaunchAction *restartAction = [SBSRelaunchAction actionWithReason:@"RestartRenderServer" options:SBSRelaunchActionOptionsFadeToBlackTransition targetURL:nil];
-        [[FBSSystemService sharedService] sendActions:[NSSet setWithObject:restartAction] withResult:nil];
-}
-
-
 #ifdef __cplusplus
 }
 #endif

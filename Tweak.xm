@@ -10,6 +10,9 @@
 #import <SpringBoard/SpringBoard.h>
 #import <SpringBoardServices/SBSRelaunchAction.h>
 
+#import <Cephei/HBPreferences.h>
+#import <Cephei/HBRespringController.h>
+
 #import "util.h"
 
 @interface MCProfileConnection
@@ -34,7 +37,7 @@
 - (void)lockScreenViewControllerRequestsUnlock;
 @end
 
-NSUserDefaults *prefs;
+HBPreferences *prefs;
 BOOL isUnlocked;
 BOOL isResetting = NO;
 BOOL didStartBlock = NO;
@@ -47,7 +50,7 @@ BOOL isPasscodeEnabled() {
 }
 
 BOOL checkPasscode(NSString *passcode) {
-    NSUserDefaults *prefs = [[NSUserDefaults alloc] initWithSuiteName:@"net.cadoth.fakepass"];
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
     NSString *salt = [prefs objectForKey:@"passcodeSalt"];
     return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
 }
@@ -187,7 +190,7 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
     creatingPasscode = NO;
 
-    NSUserDefaults *prefs = [[NSUserDefaults alloc] initWithSuiteName:@"net.cadoth.fakepass"];
+    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
     if (oldPasscode.length > 0 && !checkPasscode(oldPasscode)) {
         %log(@"old passcode incorrect");
@@ -230,7 +233,7 @@ BOOL doUnlock(NSString *passcode) {
 
     if (!oldPasscode) {
         // respring to work around bug where it's impossible to unlock
-        respring();
+        [HBRespringController respring];
     }
 
     return true;
@@ -372,7 +375,7 @@ BOOL doUnlock(NSString *passcode) {
     BOOL ret = [prefs integerForKey:@"failedAttempts"] > 10;
 
     if (ret && !isResetting) {
-        NSUserDefaults *sbPrefs = [[NSUserDefaults alloc] initWithSuiteName:@"com.apple.springboard"];
+        HBPreferences *sbPrefs = [[HBPreferences alloc] initWithIdentifier:@"com.apple.springboard"];
         if ([sbPrefs boolForKey:@"SBDeviceWipeEnabled"]) {
             void *UIKit = dlopen("/System/Library/Framework/UIKit.framework/UIKit", RTLD_LAZY);
             mach_port_t *(*SBSSpringBoardServerPort)() = (mach_port_t * (*)()) dlsym(UIKit, "SBSSpringBoardServerPort");
@@ -382,7 +385,7 @@ BOOL doUnlock(NSString *passcode) {
 
             isResetting = YES;
             SBDataReset(SBSSpringBoardServerPort(), 5);
-            respring();
+            [HBRespringController respring];
         }
     }
 
@@ -598,7 +601,7 @@ BOOL doUnlock(NSString *passcode) {
 
         NSLog(@"Injected into %@", bundleId);
 
-        prefs = [[NSUserDefaults alloc] initWithSuiteName:@"net.cadoth.fakepass"];
+        prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{
             @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],

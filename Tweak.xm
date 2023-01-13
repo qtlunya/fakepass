@@ -217,7 +217,8 @@ BOOL doUnlock(NSString *passcode) {
        localizedReason:(NSString *)localizedReason
                  reply:(void (^)(BOOL, NSError *))reply {
     void (^callback)(BOOL, NSError *) = ^(BOOL success, NSError *error) {
-        // HACK: bypass ACM validation errors
+        // HACK: bypass ACM validation errors for in-app authentication
+        // -4 is for biometrics, -1000 is for passcode
         if (success || ([error.domain isEqualToString:@"com.apple.LocalAuthentication"] && (error.code == -4 || error.code == -1000))) {
             reply(YES, nil);
         } else {

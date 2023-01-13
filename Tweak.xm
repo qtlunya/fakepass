@@ -96,7 +96,7 @@ BOOL doUnlock(NSString *passcode) {
     }
 }
 
-%hook CSFaceOcclusionMonitor
+%hook CSUserPresenceMonitor
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
     NSLog(@"handleBiometricEvent: %lu", eventType);
 
@@ -590,16 +590,6 @@ BOOL doUnlock(NSString *passcode) {
     //%log(@"hooked");
 
     return isUnlocked;
-}
-%end
-
-%hook SBLockScreenBiometricAuthenticationCoordinator
-- (BOOL)isEnabled {
-    return YES;
-}
-
-- (BOOL)isUnlockingDisabled {
-    return NO;
 }
 %end
 

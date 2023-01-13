@@ -32,6 +32,8 @@
 @end
 
 @interface SBFDeviceLockOutController
+- (BOOL)isPermanentlyBlocked;
+- (BOOL)isTemporarilyBlocked;
 - (void)temporaryBlockStatusChanged;
 @end
 
@@ -105,6 +107,10 @@ BOOL doUnlock(NSString *passcode) {
 %hook CSUserPresenceMonitor
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
     NSLog(@"handleBiometricEvent: %lu", eventType);
+
+    if ([lockOutController isTemporarilyBlocked] || [lockOutController isPermanentlyBlocked]) {
+        return %orig;
+    }
 
     if (eventType == 1 || eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
         SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];

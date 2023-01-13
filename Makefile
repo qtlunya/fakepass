@@ -8,7 +8,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = FakePass
 
 FakePass_FILES = Tweak.xm util.m
-FakePass_CFLAGS = -fobjc-arc
+FakePass_CFLAGS = -fobjc-arc -Wno-error
 FakePass_EXTRA_FRAMEWORKS += Cephei
 
 include $(THEOS_MAKE_PATH)/tweak.mk

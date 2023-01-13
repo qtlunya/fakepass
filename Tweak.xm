@@ -23,12 +23,12 @@
 @end
 
 @interface MCProfileConnection
-+ (id)sharedConnection;
++ (instancetype)sharedConnection;
 - (id)effectiveValueForSetting:(NSString *)setting;
 @end
 
 @interface SBCoverSheetPresentationManager
-+ (id)sharedInstance;
++ (instancetype)sharedInstance;
 @end
 
 @interface SBFDeviceLockOutController
@@ -40,7 +40,7 @@
 @end
 
 @interface SBLockScreenManager
-+ (id)sharedInstance;
++ (instancetype)sharedInstance;
 - (BOOL)_attemptUnlockWithPasscode:(NSString *)passcode mesa:(BOOL)mesa finishUIUnlock:(BOOL)finishUIUnlock completion:(id)completion;
 - (BOOL)_shouldUnlockUIOnKeyDownEvent;
 - (CSCoverSheetViewController *)coverSheetViewController;
@@ -50,7 +50,7 @@
 @interface SBUIBiometricResource
 @property (nonatomic,readonly) BOOL hasMesaSupport;
 @property (nonatomic,readonly) BOOL hasPearlSupport;
-+ (id)sharedInstance;
++ (instancetype)sharedInstance;
 @end
 
 HBPreferences *prefs;
@@ -70,9 +70,15 @@ BOOL checkPasscode(NSString *passcode) {
     if (isInternalUnlock && [passcode isEqualToString:@"__FAKEPASS_INTERNAL_UNLOCK"]) {
         return YES;
     }
+
     prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
     NSString *salt = [prefs objectForKey:@"passcodeSalt"];
-    return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
+    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
+        [prefs setInteger:passcode.length forKey:@"passcodeLength"]; // migration from 0.1.0
+        return YES;
+    } else {
+        return NO;
+    }
 }
 
 BOOL doUnlock(NSString *passcode) {
@@ -100,7 +106,7 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
     NSLog(@"handleBiometricEvent: %lu", eventType);
 
-    if (eventType == 3 || eventType == 13) { // 3 = Touch ID success, 13 = Face ID success?
+    if (eventType == 1 || eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
         SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
 
         BOOL shouldFinishUIUnlock = (
@@ -109,8 +115,10 @@ BOOL doUnlock(NSString *passcode) {
             && ![%c(SBAssistantController) isVisible]
         );
 
+        SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
+        BOOL mesa = resource.hasMesaSupport;
         isInternalUnlock = YES;
-        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK" mesa:NO finishUIUnlock:shouldFinishUIUnlock completion:^{
+        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK" mesa:mesa finishUIUnlock:shouldFinishUIUnlock completion:^{
             isInternalUnlock = NO;
         }];
     }
@@ -133,20 +141,7 @@ BOOL doUnlock(NSString *passcode) {
 
     %log(@"hooked");
 
-    int passcodeType = [prefs integerForKey:@"passcodeType"];
-    int length;
-
-    switch (passcodeType) {
-        case 0:
-            length = 4;
-            break;
-        case 1:
-            length = 6;
-            break;
-        default:
-            return %orig;
-    }
-
+    int length = [prefs integerForKey:@"passcodeLength"];
     NSLog(@"Spoofing passcode length: %d", length);
     return length;
 }
@@ -222,6 +217,7 @@ BOOL doUnlock(NSString *passcode) {
        localizedReason:(NSString *)localizedReason
                  reply:(void (^)(BOOL, NSError *))reply {
     void (^callback)(BOOL, NSError *) = ^(BOOL success, NSError *error) {
+        // HACK: bypass ACM validation errors
         if (success || ([error.domain isEqualToString:@"com.apple.LocalAuthentication"] && (error.code == -4 || error.code == -1000))) {
             reply(YES, nil);
         } else {
@@ -279,6 +275,7 @@ BOOL doUnlock(NSString *passcode) {
         NSString *salt = generateSalt();
         [prefs setObject:generateHashFor(newPasscode, salt) forKey:@"passcodeHash"];
         [prefs setObject:salt forKey:@"passcodeSalt"];
+        [prefs setInteger:newPasscode.length forKey:@"passcodeLength"];
 
         NSInteger passcodeType;
 

@@ -297,7 +297,6 @@ BOOL doUnlock(NSString *passcode) {
         NSString *salt = generateSalt();
         [prefs setObject:generateHashFor(newPasscode, salt) forKey:@"passcodeHash"];
         [prefs setObject:salt forKey:@"passcodeSalt"];
-        [prefs setInteger:newPasscode.length forKey:@"passcodeLength"];
 
         NSInteger passcodeType;
 

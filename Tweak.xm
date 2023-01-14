@@ -86,9 +86,9 @@ BOOL doUnlock(NSString *passcode) {
     if (checkPasscode(passcode)) {
         NSLog(@"Successful unlock with passcode: %@", passcode);
         isUnlocked = YES;
-        [prefs setBool:NO forKey:@"inBioLockout"];
-        [prefs setInteger:0 forKey:@"failedAttempts"];
         [prefs removeObjectForKey:@"blockTime"];
+        [prefs setInteger:0 forKey:@"failedAttempts"];
+        [prefs setBool:NO forKey:@"inBioLockout"];
         return YES;
     } else {
         NSLog(@"Failed unlock with passcode: %@", passcode);

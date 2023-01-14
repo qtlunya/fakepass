@@ -183,7 +183,7 @@ BOOL doUnlock(NSString *passcode) {
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
 
-    return passcodeType < 3;
+    return passcodeType < 2;
 }
 %end
 

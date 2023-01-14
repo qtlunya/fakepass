@@ -56,6 +56,7 @@
 @end
 
 HBPreferences *prefs;
+BOOL bioLockout = NO;
 BOOL isUnlocked;
 BOOL isInternalUnlock = NO;
 BOOL isResetting = NO;
@@ -82,6 +83,7 @@ BOOL doUnlock(NSString *passcode) {
     if (checkPasscode(passcode)) {
         NSLog(@"Successful unlock with passcode: %@", passcode);
         isUnlocked = YES;
+        bioLockout = NO;
         [prefs setInteger:0 forKey:@"failedAttempts"];
         return YES;
     } else {
@@ -103,7 +105,7 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
     NSLog(@"handleBiometricEvent: %lu", eventType);
 
-    if ([lockOutController isTemporarilyBlocked] || [lockOutController isPermanentlyBlocked]) {
+    if (bioLockout || [lockOutController isTemporarilyBlocked] || [lockOutController isPermanentlyBlocked]) {
         return %orig;
     }
 
@@ -117,11 +119,16 @@ BOOL doUnlock(NSString *passcode) {
         );
 
         SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
-        BOOL mesa = resource.hasMesaSupport;
         isInternalUnlock = YES;
-        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK" mesa:mesa finishUIUnlock:shouldFinishUIUnlock completion:^{
-            isInternalUnlock = NO;
-        }];
+        if (resource.hasMesaSupport) {
+            [lockScreenManager _attemptUnlockWithPasscode:nil mesa:YES finishUIUnlock:shouldFinishUIUnlock completion:^{
+                isInternalUnlock = NO;
+            }];
+        } else {
+            [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK" mesa:NO finishUIUnlock:shouldFinishUIUnlock completion:^{
+                isInternalUnlock = NO;
+            }];
+        }
     }
 
     return %orig;
@@ -643,6 +650,7 @@ BOOL doUnlock(NSString *passcode) {
         if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + maxGracePeriod > now) {
             NSLog(@"Unlocking due to grace period");
             isUnlocked = YES;
+            bioLockout = NO;
         }
     }
 
@@ -665,6 +673,7 @@ BOOL doUnlock(NSString *passcode) {
         }
 
         isUnlocked = NO;
+        bioLockout = YES;
     }
 
     %orig;
@@ -674,7 +683,7 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBUIBiometricResource
 - (NSUInteger)biometricLockoutState {
     %log(@"hooked");
-    return 0;
+    return bioLockout ? 1 : 0;
 }
 %end
 
@@ -700,6 +709,7 @@ BOOL doUnlock(NSString *passcode) {
         }
 
         isUnlocked = NO;
+        bioLockout = YES;
     }
 
     %orig;

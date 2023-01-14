@@ -118,17 +118,10 @@ BOOL doUnlock(NSString *passcode) {
             && ![%c(SBAssistantController) isVisible]
         );
 
-        SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
         isInternalUnlock = YES;
-        if (resource.hasMesaSupport) {
-            [lockScreenManager _attemptUnlockWithPasscode:nil mesa:YES finishUIUnlock:shouldFinishUIUnlock completion:^{
-                isInternalUnlock = NO;
-            }];
-        } else {
-            [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK" mesa:NO finishUIUnlock:shouldFinishUIUnlock completion:^{
-                isInternalUnlock = NO;
-            }];
-        }
+        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK" mesa:NO finishUIUnlock:shouldFinishUIUnlock completion:^{
+            isInternalUnlock = NO;
+        }];
     }
 
     return %orig;

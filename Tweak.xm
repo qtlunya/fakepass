@@ -43,7 +43,10 @@
 
 @interface SBLockScreenManager
 + (instancetype)sharedInstance;
-- (BOOL)_attemptUnlockWithPasscode:(NSString *)passcode mesa:(BOOL)mesa finishUIUnlock:(BOOL)finishUIUnlock completion:(id)completion;
+- (BOOL)_attemptUnlockWithPasscode:(NSString *)passcode
+                              mesa:(BOOL)mesa
+                    finishUIUnlock:(BOOL)finishUIUnlock
+                        completion:(id)completion;
 - (BOOL)_shouldUnlockUIOnKeyDownEvent;
 - (CSCoverSheetViewController *)coverSheetViewController;
 - (void)lockScreenViewControllerRequestsUnlock;
@@ -53,10 +56,10 @@
 @property (nonatomic,readonly) BOOL hasMesaSupport;
 @property (nonatomic,readonly) BOOL hasPearlSupport;
 + (instancetype)sharedInstance;
+- (NSUInteger)biometricLockoutState;
 @end
 
 HBPreferences *prefs;
-BOOL bioLockout = NO;
 BOOL isUnlocked;
 BOOL isInternalUnlock = NO;
 BOOL isResetting = NO;
@@ -83,8 +86,9 @@ BOOL doUnlock(NSString *passcode) {
     if (checkPasscode(passcode)) {
         NSLog(@"Successful unlock with passcode: %@", passcode);
         isUnlocked = YES;
-        bioLockout = NO;
+        [prefs setBool:NO forKey:@"inBioLockout"];
         [prefs setInteger:0 forKey:@"failedAttempts"];
+        [prefs removeObjectForKey:@"blockTime"];
         return YES;
     } else {
         NSLog(@"Failed unlock with passcode: %@", passcode);
@@ -105,21 +109,22 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
     NSLog(@"handleBiometricEvent: %lu", eventType);
 
-    if (bioLockout || [lockOutController isTemporarilyBlocked] || [lockOutController isPermanentlyBlocked]) {
+    if (
+        [[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] == 1
+        || [lockOutController isTemporarilyBlocked]
+        || [lockOutController isPermanentlyBlocked]
+    ) {
         return %orig;
     }
 
     if (eventType == 1 || eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
         SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
 
-        BOOL shouldFinishUIUnlock = (
-            ([lockScreenManager.coverSheetViewController isMainPageVisible] || [lockScreenManager.coverSheetViewController isShowingTodayView])
-            && ![lockScreenManager _shouldUnlockUIOnKeyDownEvent]
-            && ![%c(SBAssistantController) isVisible]
-        );
-
         isInternalUnlock = YES;
-        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK" mesa:NO finishUIUnlock:shouldFinishUIUnlock completion:^{
+        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
+                                                 mesa:NO
+                                       finishUIUnlock:NO
+                                           completion:^{
             isInternalUnlock = NO;
         }];
     }
@@ -233,7 +238,9 @@ BOOL doUnlock(NSString *passcode) {
     void (^callback)(BOOL, NSError *) = ^(BOOL success, NSError *error) {
         // HACK: bypass ACM validation errors for in-app authentication
         // -4 is for biometrics, -1000 is for passcode
-        if (success || ([error.domain isEqualToString:@"com.apple.LocalAuthentication"] && (error.code == -4 || error.code == -1000))) {
+        if (success || (
+            [error.domain isEqualToString:@"com.apple.LocalAuthentication"] && (error.code == -4 || error.code == -1000)
+        )) {
             reply(YES, nil);
         } else {
             reply(NO, error);
@@ -314,6 +321,9 @@ BOOL doUnlock(NSString *passcode) {
     } else {
         %log(@"no new passcode");
 
+        [prefs removeObjectForKey:@"blockTime"];
+        [prefs removeObjectForKey:@"failedAttempts"];
+        [prefs removeObjectForKey:@"inBioLockout"];
         [prefs removeObjectForKey:@"passcodeHash"];
         [prefs removeObjectForKey:@"passcodeSalt"];
         [prefs removeObjectForKey:@"passcodeType"];
@@ -455,7 +465,11 @@ BOOL doUnlock(NSString *passcode) {
             [NSBundle bundleWithIdentifier:@"com.apple.SpringBoardFoundation"],
             nil
         );
-        return [NSString stringWithFormat:localizedString, [NSDateComponentsFormatter localizedStringFromDateComponents:dateComponents unitsStyle:NSDateComponentsFormatterUnitsStyleFull]];
+        NSString *time = [
+            NSDateComponentsFormatter localizedStringFromDateComponents:dateComponents
+                                                             unitsStyle:NSDateComponentsFormatterUnitsStyleFull
+        ];
+        return [NSString stringWithFormat:localizedString, time];
     } else {
         return NSLocalizedStringFromTableInBundle(
             @"CONNECT_TO_ITUNES",
@@ -498,8 +512,12 @@ BOOL doUnlock(NSString *passcode) {
             void *UIKit = dlopen("/System/Library/Framework/UIKit.framework/UIKit", RTLD_LAZY);
             mach_port_t *(*SBSSpringBoardServerPort)() = (mach_port_t * (*)()) dlsym(UIKit, "SBSSpringBoardServerPort");
 
-            void *SpringBoardServices = dlopen("/System/Library/PrivateFrameworks/SpringBoardServices.framework/SpringBoardServices", RTLD_LAZY);
-            int (*SBDataReset)(mach_port_t* port, int wipeMode) = (int (*)(mach_port_t *, int)) dlsym(SpringBoardServices, "SBDataReset");
+            void *SpringBoardServices = dlopen(
+                "/System/Library/PrivateFrameworks/SpringBoardServices.framework/SpringBoardServices", RTLD_LAZY
+            );
+            int (*SBDataReset)(mach_port_t* port, int wipeMode) = (
+                (int (*)(mach_port_t *, int)) dlsym(SpringBoardServices, "SBDataReset")
+            );
 
             isResetting = YES;
             SBDataReset(SBSSpringBoardServerPort(), 5);
@@ -643,7 +661,7 @@ BOOL doUnlock(NSString *passcode) {
         if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + maxGracePeriod > now) {
             NSLog(@"Unlocking due to grace period");
             isUnlocked = YES;
-            bioLockout = NO;
+            [prefs setBool:NO forKey:@"inBioLockout"];
         }
     }
 
@@ -666,7 +684,7 @@ BOOL doUnlock(NSString *passcode) {
         }
 
         isUnlocked = NO;
-        bioLockout = YES;
+        [prefs setBool:YES forKey:@"inBioLockout"];
     }
 
     %orig;
@@ -676,7 +694,8 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBUIBiometricResource
 - (NSUInteger)biometricLockoutState {
     %log(@"hooked");
-    return bioLockout ? 1 : 0;
+
+    return [prefs boolForKey:@"inBioLockout"] ? 1 : 0;
 }
 %end
 
@@ -702,10 +721,16 @@ BOOL doUnlock(NSString *passcode) {
         }
 
         isUnlocked = NO;
-        bioLockout = YES;
+        [prefs setBool:YES forKey:@"inBioLockout"];
     }
 
     %orig;
+}
+%end
+
+%hook SBUIProudLockIconView
+- (NSInteger)state {
+    return 1;
 }
 %end
 
@@ -723,13 +748,16 @@ BOOL doUnlock(NSString *passcode) {
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{
+            @"inBioLockout": @NO,
             @"lockOnRespring": @YES,
             @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],
         }];
 
         isUnlocked = !isPasscodeSet() || ![prefs boolForKey:@"lockOnRespring"];
 
-        void *SpringBoardUIServices = dlopen("/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY);
+        void *SpringBoardUIServices = dlopen(
+            "/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY
+        );
         %init(SBUICurrentPasscodeStyleForUser = dlsym(SpringBoardUIServices, "SBUICurrentPasscodeStyleForUser"));
     }
 }

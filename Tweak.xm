@@ -75,12 +75,7 @@ BOOL checkPasscode(NSString *passcode) {
 
     prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
     NSString *salt = [prefs objectForKey:@"passcodeSalt"];
-    if ([generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]]) {
-        [prefs setInteger:passcode.length forKey:@"passcodeLength"]; // migration from 0.1.0
-        return YES;
-    } else {
-        return NO;
-    }
+    return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
 }
 
 BOOL doUnlock(NSString *passcode) {
@@ -147,7 +142,20 @@ BOOL doUnlock(NSString *passcode) {
 
     %log(@"hooked");
 
-    int length = [prefs integerForKey:@"passcodeLength"];
+    int passcodeType = [prefs integerForKey:@"passcodeType"];
+    int length;
+
+    switch (passcodeType) {
+        case 0:
+            length = 4;
+            break;
+        case 1:
+            length = 6;
+            break;
+        default:
+            return %orig;
+    }
+
     NSLog(@"Spoofing passcode length: %d", length);
     return length;
 }

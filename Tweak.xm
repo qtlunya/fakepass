@@ -8,6 +8,8 @@
 #import <SpringBoard/SpringBoard.h>
 //#import <SpringBoard/SBLockScreenManager.h>
 
+#import <HBLog.h>
+
 #import <Cephei/HBPreferences.h>
 #import <Cephei/HBRespringController.h>
 
@@ -84,20 +86,20 @@ BOOL checkPasscode(NSString *passcode) {
 
 BOOL doUnlock(NSString *passcode) {
     if (checkPasscode(passcode)) {
-        NSLog(@"Successful unlock with passcode: %@", passcode);
+        HBLogWarn(@"Successful unlock with passcode: %@", passcode);
         isUnlocked = YES;
         [prefs removeObjectForKey:@"blockTime"];
         [prefs setInteger:0 forKey:@"failedAttempts"];
         [prefs setBool:NO forKey:@"inBioLockout"];
         return YES;
     } else {
-        NSLog(@"Failed unlock with passcode: %@", passcode);
+        HBLogWarn(@"Failed unlock with passcode: %@", passcode);
         int failedAttempts = [prefs integerForKey:@"failedAttempts"] + 1;
         [prefs setInteger:failedAttempts forKey:@"failedAttempts"];
         if (failedAttempts >= 6) {
             [prefs setInteger:[NSDate date].timeIntervalSince1970 forKey:@"blockTime"];
             if (lockOutController != NULL) {
-                NSLog(@"Triggering device lockout due to too many failed attempts");
+                HBLogWarn(@"%@", @"Triggering device lockout due to too many failed attempts");
                 [lockOutController temporaryBlockStatusChanged];
             }
         }
@@ -107,7 +109,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook CSUserPresenceMonitor
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
-    NSLog(@"handleBiometricEvent: %lu", eventType);
+    HBLogWarn(@"handleBiometricEvent: %lu", eventType);
 
     if (
         [[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] == 1
@@ -136,16 +138,16 @@ BOOL doUnlock(NSString *passcode) {
 %hook DevicePINController
 - (int)pinLength {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
     if (creatingPasscode) {
-        %log(@"passcode is being created, ignoring");
+        HBLogWarn(@"%@", @"passcode is being created, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
     int length;
@@ -161,38 +163,38 @@ BOOL doUnlock(NSString *passcode) {
             return %orig;
     }
 
-    NSLog(@"Spoofing passcode length: %d", length);
+    HBLogWarn(@"Spoofing passcode length: %d", length);
     return length;
 }
 
 - (BOOL)isNumericPIN {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
     if (creatingPasscode) {
-        %log(@"passcode is being created, ignoring");
+        HBLogWarn(@"%@", @"passcode is being created, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     return [prefs integerForKey:@"passcodeType"] < 3;
 }
 
 - (BOOL)simplePIN {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
     if (creatingPasscode) {
-        %log(@"passcode is being created, ignoring");
+        HBLogWarn(@"%@", @"passcode is being created, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     int passcodeType = [prefs integerForKey:@"passcodeType"];
 
@@ -213,7 +215,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook LAContext
 - (NSInteger)biometryType {
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
 
@@ -228,7 +230,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)canEvaluatePolicy:(NSInteger)policy error:(id *)error {
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
     return YES;
 }
 
@@ -257,11 +259,11 @@ BOOL doUnlock(NSString *passcode) {
                              policy:(NSInteger)policy
                             options:(NSDictionary *)options {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     return checkPasscode([[NSString alloc] initWithData:secureData.data encoding:NSUTF8StringEncoding]) ? 0 : 1;
 }
@@ -269,10 +271,10 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook MCPasscodeManager
 - (BOOL)isPasscodeSet {
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
-        %log(@"Spoofing passcode state");
+        HBLogWarn(@"%@", @"Spoofing passcode state");
         return YES;
     }
 
@@ -287,12 +289,12 @@ BOOL doUnlock(NSString *passcode) {
     prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
     if (oldPasscode.length > 0 && !checkPasscode(oldPasscode)) {
-        %log(@"old passcode incorrect");
+        HBLogWarn(@"%@", @"old passcode incorrect");
         return NO;
     }
 
     if (newPasscode.length > 0) {
-        %log(@"got new passcode");
+        HBLogWarn(@"%@", @"got new passcode");
 
         NSString *salt = generateSalt();
         [prefs setObject:generateHashFor(newPasscode, salt) forKey:@"passcodeHash"];
@@ -318,7 +320,7 @@ BOOL doUnlock(NSString *passcode) {
 
         [prefs setInteger:passcodeType forKey:@"passcodeType"];
     } else {
-        %log(@"no new passcode");
+        HBLogWarn(@"%@", @"no new passcode");
 
         [prefs removeObjectForKey:@"blockTime"];
         [prefs removeObjectForKey:@"failedAttempts"];
@@ -338,17 +340,17 @@ BOOL doUnlock(NSString *passcode) {
 
 - (BOOL)unlockDeviceWithPasscode:(id)passcode outError:(id *)error {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     if (checkPasscode(passcode)) {
-        NSLog(@"Successful authentication with passcode: %@", passcode);
+        HBLogWarn(@"Successful authentication with passcode: %@", passcode);
         return YES;
     } else {
-        NSLog(@"Failed authentication with passcode: %@", passcode);
+        HBLogWarn(@"Failed authentication with passcode: %@", passcode);
         return NO;
     }
 }
@@ -368,7 +370,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (void)setValue:(id)value forSetting:(NSString *)setting passcode:(id)passcode {
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     if ([setting isEqualToString:@"maxGracePeriod"]) {
         [prefs setInteger:[value integerValue] forKey:@"maxGracePeriod"];
@@ -380,16 +382,16 @@ BOOL doUnlock(NSString *passcode) {
 
 %hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
     if (!isPasscodeSet()) {
-        NSLog(@"SBUICurrentPasscodeStyleForUser: no passcode set, ignoring");
+        HBLogWarn(@"%@", @"SBUICurrentPasscodeStyleForUser: no passcode set, ignoring");
         return %orig;
     }
 
     if (creatingPasscode) {
-        NSLog(@"SBUICurrentPasscodeStyleForUser: passcode is being created, ignoring");
+        HBLogWarn(@"%@", @"SBUICurrentPasscodeStyleForUser: passcode is being created, ignoring");
         return %orig;
     }
 
-    NSLog(@"SBUICurrentPasscodeStyleForUser: hooked");
+    HBLogWarn(@"%@", @"SBUICurrentPasscodeStyleForUser: hooked");
 
     return [prefs integerForKey:@"passcodeType"];
 }
@@ -397,11 +399,11 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBBacklightController
 - (void) _startFadeOutAnimationFromLockSource:(int)arg1 {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     if (isUnlocked) {
         [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
@@ -413,11 +415,11 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBDoubleClickSleepWakeHardwareButtonInteraction
 - (void)_performSleep {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     if (isUnlocked) {
         [[%c(SBLockScreenManager) sharedInstance] lockScreenViewControllerRequestsUnlock];
@@ -429,11 +431,11 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBFDeviceBlockTimer
 - (NSString *)subtitleText {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     int failedAttempts = [prefs integerForKey:@"failedAttempts"];
     NSTimeInterval blockTime = [prefs integerForKey:@"blockTime"];
@@ -483,11 +485,11 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBFDeviceLockOutController
 - (id)initWithThermalController:(id)arg1 authenticationController:(id)arg2 {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     lockOutController = self;
 
@@ -496,11 +498,11 @@ BOOL doUnlock(NSString *passcode) {
 
 - (BOOL)isPermanentlyBlocked {
     if (!isPasscodeSet()) {
-        //%log(@"no passcode set, ignoring");
+        //HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    //%log(@"hooked");
+    //HBLogWarn(@"%@", @"hooked");
 
     BOOL ret = [prefs integerForKey:@"failedAttempts"] > 10;
 
@@ -529,11 +531,11 @@ BOOL doUnlock(NSString *passcode) {
 
 - (BOOL)isTemporarilyBlocked {
     if (!isPasscodeSet()) {
-        //%log(@"no passcode set, ignoring");
+        //HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    //%log(@"hooked");
+    //HBLogWarn(@"%@", @"hooked");
 
     NSTimeInterval blockTime = [prefs integerForKey:@"blockTime"];
     NSTimeInterval now = [NSDate date].timeIntervalSince1970;
@@ -563,23 +565,23 @@ BOOL doUnlock(NSString *passcode) {
 // iOS 14
 - (BOOL)unlockWithPasscode:(NSString *)passcode error:(id *)error {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     return doUnlock(passcode);
 }
 
-// iOS 15
+// iOS 15+
 - (BOOL)unlockWithOptions:(SBFMobileKeyBagUnlockOptions *)options error:(id *)error {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     return doUnlock([[NSString alloc] initWithData:options.passcode encoding:NSUTF8StringEncoding]);
 }
@@ -588,11 +590,11 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBFMobileKeyBagState
 - (NSInteger)lockState {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     return isUnlocked ? 0 : 2;
 }
@@ -601,22 +603,22 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBFUserAuthenticationController
 - (BOOL)isAuthenticated {
     if (!isPasscodeSet()) {
-        //%log(@"no passcode set, ignoring");
+        //HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    //%log(@"hooked");
+    //HBLogWarn(@"%@", @"hooked");
 
     return isUnlocked;
 }
 
 - (BOOL)isAuthenticatedCached {
     if (!isPasscodeSet()) {
-        //%log(@"no passcode set, ignoring");
+        //HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    //%log(@"hooked");
+    //HBLogWarn(@"%@", @"hooked");
 
     return isUnlocked;
 }
@@ -625,16 +627,16 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBLockScreenManager
 - (void)lockUIFromSource:(int)source withOptions:(id)options {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
-    NSLog(@"Screen locked from source: %d", source);
+    HBLogWarn(@"Screen locked from source: %d", source);
 
     if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
-        NSLog(@"Locking device");
+        HBLogWarn(@"%@", @"Locking device");
         isUnlocked = NO;
         lastLockTime = [NSDate date].timeIntervalSince1970;
     }
@@ -643,22 +645,21 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (void)unlockUIFromSource:(int)source withOptions:(id)options {
-    if (!isPasscodeSet()/* || source == 24*/) {
-        // 24 = screen already unlocked, swiping up on the lock screen
-        %log(@"no passcode set, ignoring");
+    if (!isPasscodeSet()) {
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
-    NSLog(@"Screen unlocked from source: %d", source);
+    HBLogWarn(@"Screen unlocked from source: %d", source);
 
     if (!isUnlocked) {
         NSTimeInterval maxGracePeriod = [prefs integerForKey:@"maxGracePeriod"];
         NSTimeInterval now = [NSDate date].timeIntervalSince1970;
 
         if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + maxGracePeriod > now) {
-            NSLog(@"Unlocking due to grace period");
+            HBLogWarn(@"%@", @"Unlocking due to grace period");
             isUnlocked = YES;
             [prefs setBool:NO forKey:@"inBioLockout"];
         }
@@ -671,11 +672,11 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBMainWorkspace
 - (void)dismissPowerDownTransientOverlayWithCompletion:(id)arg1 {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         if (isUnlocked) {
@@ -692,7 +693,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBUIBiometricResource
 - (NSUInteger)biometricLockoutState {
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     return [prefs boolForKey:@"inBioLockout"] ? 1 : 0;
 }
@@ -700,7 +701,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook SBUIPasscodeLockViewBase
 - (BOOL)_isBiometricAuthenticationAllowed {
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
     return YES;
 }
 %end
@@ -708,11 +709,11 @@ BOOL doUnlock(NSString *passcode) {
 %hook SOSManager
 - (void)didDismissClientSOSBeforeSOSCall:(id)arg1 {
     if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
+        HBLogWarn(@"%@", @"no passcode set, ignoring");
         return %orig;
     }
 
-    %log(@"hooked");
+    HBLogWarn(@"%@", @"hooked");
 
     if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         if (isUnlocked) {
@@ -742,7 +743,7 @@ BOOL doUnlock(NSString *passcode) {
             return;
         }
 
-        NSLog(@"Injected into %@", bundleId);
+        HBLogWarn(@"Injected into %@", bundleId);
 
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 

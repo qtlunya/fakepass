@@ -300,7 +300,7 @@ BOOL doUnlock(NSString *passcode) {
 
         NSInteger passcodeType;
 
-        if ([newPasscode rangeOfString:@"^\\d+$" options:NSRegularExpressionSearch].location != NSNotFound) {
+        if ([newPasscode rangeOfString:@"^[0-9]+$" options:NSRegularExpressionSearch].location != NSNotFound) {
             switch (newPasscode.length) {
                 case 4:
                     passcodeType = 0;

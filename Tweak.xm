@@ -20,7 +20,7 @@
 + (NSArray *)availableDevices;
 @end
 
-@interface BKFaceDetectOperation
+@interface BKMatchOperation
 - (instancetype)initWithDevice:(BKDevice *)device;
 - (void)startBioOperation:(BOOL)arg1 reply:(id)reply;
 @end
@@ -75,6 +75,7 @@
 HBPreferences *prefs;
 BOOL isUnlocked;
 BOOL isInternalUnlock = NO;
+BOOL inUnlockTransition = NO;
 BOOL isResetting = NO;
 BOOL didStartBlock = NO;
 BOOL creatingPasscode = NO;
@@ -145,7 +146,7 @@ BOOL doUnlock(NSString *passcode) {
         return orig;
     }
 
-    if (eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
+    if (eventType == 1 || eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
         NSArray *devices = [%c(BKDeviceManager) availableDevices];
         NSError *error = nil;
         BKDevice *device = [%c(BKDevice) deviceWithDescriptor:devices[0] error:&error];
@@ -154,17 +155,19 @@ BOOL doUnlock(NSString *passcode) {
             return orig;
         }
 
-        BKFaceDetectOperation *operation = [[%c(BKFaceDetectOperation) alloc] initWithDevice:device];
+        BKMatchOperation *operation = [[%c(BKMatchOperation) alloc] initWithDevice:device];
         SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
-        isInternalUnlock = YES;
+        __block BOOL success = NO;
         [operation startBioOperation:YES reply:^{
-            NSLog(@"Face detect successful");
-
-            [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
-                                                     mesa:NO
-                                           finishUIUnlock:NO
-                                               completion:^{ isInternalUnlock = NO; }];
+            NSLog(@"Biometric match successful");
+            success = YES;
         }];
+        while (!success) {}
+
+        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
+                                                 mesa:NO
+                                       finishUIUnlock:inUnlockTransition
+                                           completion:^{ isInternalUnlock = NO; inUnlockTransition = NO; }];
     }
 
     return orig;
@@ -683,6 +686,14 @@ BOOL doUnlock(NSString *passcode) {
 }
 %end
 
+%hook SBCoverSheetSystemGesturesDelegate
+- (id)dismissGestureRecognizer {
+    //%log(@"hooked");
+    inUnlockTransition = YES;
+    return %orig;
+}
+%end
+
 %hook SBLockScreenManager
 - (void)lockUIFromSource:(int)source withOptions:(id)options {
     if (!isPasscodeSet()) {
@@ -696,6 +707,7 @@ BOOL doUnlock(NSString *passcode) {
     if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         NSLog(@"Locking device");
         isUnlocked = NO;
+        inUnlockTransition = NO;
         lastLockTime = [NSDate date].timeIntervalSince1970;
         [prefs setBool:NO forKey:@"isEnrollingFaceID"];
     }
@@ -720,6 +732,7 @@ BOOL doUnlock(NSString *passcode) {
         if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + maxGracePeriod > now) {
             NSLog(@"Unlocking due to grace period");
             isUnlocked = YES;
+            inUnlockTransition = NO;
             [prefs setBool:NO forKey:@"inBioLockout"];
         }
     }

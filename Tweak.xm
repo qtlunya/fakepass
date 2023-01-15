@@ -237,14 +237,14 @@ BOOL doUnlock(NSString *passcode) {
 
     SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
 
-    if (resource.hasEnrolledIdentities) {
+    //if (resource.hasEnrolledIdentities) {
         if (resource.hasMesaSupport) {
             return 1;
         }
         if (resource.hasPearlSupport) {
             return 2;
         }
-    }
+    //}
     return 0;
 }
 

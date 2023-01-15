@@ -795,7 +795,8 @@ BOOL doUnlock(NSString *passcode) {
 
         // skip injection into problematic processes
         if (
-            [bundleId isEqualToString:@"com.apple.backboardd"]
+            !bundleId
+            || [bundleId isEqualToString:@"com.apple.backboardd"]
             || [bundleId isEqualToString:@"com.apple.datamigrator"]
             || [bundleId isEqualToString:@"com.apple.DictionaryServiceHelper"]
         ) {

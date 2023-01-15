@@ -132,19 +132,17 @@ BOOL doUnlock(NSString *passcode) {
         %log(@"no passcode set, ignoring");
         return orig;
     }
-    SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
+    /*SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
     if (!resource.hasEnrolledIdentities) {
         %log(@"no biometrics enrolled, ignoring");
-        return %orig;
-    }
+        return orig;
+    }*/
     NSLog(@"handleBiometricEvent: %lu", eventType);
 
-    if (
-        [[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] == 1
-        || [lockOutController isTemporarilyBlocked]
-        || [lockOutController isPermanentlyBlocked]
-    ) {
-        return %orig;
+    if ([[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] == 1
+            || [lockOutController isTemporarilyBlocked]
+            || [lockOutController isPermanentlyBlocked]) {
+        return orig;
     }
 
     if (eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
@@ -293,10 +291,8 @@ BOOL doUnlock(NSString *passcode) {
     BOOL success = %orig;
     // HACK: bypass ACM validation errors for in-app authentication
     // -4 is for biometrics, -1000 is for passcode
-    if (
-        success
-        || ([(*error).domain isEqualToString:@"com.apple.LocalAuthentication"] && ((*error).code == -4 || (*error).code == -1000))
-    ) {
+    if (success || ([(*error).domain isEqualToString:@"com.apple.LocalAuthentication"]
+                    && ((*error).code == -4 || (*error).code == -1000))) {
         *error = nil;
         return YES;
     } else {
@@ -316,10 +312,8 @@ BOOL doUnlock(NSString *passcode) {
     void (^callback)(BOOL, NSError *) = ^(BOOL success, NSError *error) {
         // HACK: bypass ACM validation errors for in-app authentication
         // -4 is for biometrics, -1000 is for passcode
-        if (
-            success
-            || ([error.domain isEqualToString:@"com.apple.LocalAuthentication"] && (error.code == -4 || error.code == -1000))
-        ) {
+        if (success || ([error.domain isEqualToString:@"com.apple.LocalAuthentication"]
+                        && (error.code == -4 || error.code == -1000))) {
             reply(YES, nil);
         } else {
             reply(NO, error);
@@ -818,13 +812,11 @@ BOOL doUnlock(NSString *passcode) {
         NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
 
         // skip injection into problematic processes
-        if (
-            !bundleId
-            || [bundleId isEqualToString:@"com.apple.backboardd"]
-            || [bundleId isEqualToString:@"com.apple.datamigrator"]
-            || [bundleId isEqualToString:@"com.apple.DictionaryServiceHelper"]
-            || [bundleId isEqualToString:@"com.apple.VideoSubscriberAccount.DeveloperService"]
-        ) {
+        if (!bundleId
+                || [bundleId isEqualToString:@"com.apple.backboardd"]
+                || [bundleId isEqualToString:@"com.apple.datamigrator"]
+                || [bundleId isEqualToString:@"com.apple.DictionaryServiceHelper"]
+                || [bundleId isEqualToString:@"com.apple.VideoSubscriberAccount.DeveloperService"]) {
             return;
         }
 

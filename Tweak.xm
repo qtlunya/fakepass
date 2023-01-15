@@ -53,6 +53,7 @@
 @end
 
 @interface SBUIBiometricResource
+@property (nonatomic,readonly) BOOL hasEnrolledIdentities;
 @property (nonatomic,readonly) BOOL hasMesaSupport;
 @property (nonatomic,readonly) BOOL hasPearlSupport;
 + (instancetype)sharedInstance;
@@ -117,7 +118,11 @@ BOOL doUnlock(NSString *passcode) {
         %log(@"no passcode set, ignoring");
         return %orig;
     }
-
+    SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
+    if (!resource.hasEnrolledIdentities) {
+        %log(@"no biometrics enrolled, ignoring");
+        return %orig;
+    }
     NSLog(@"handleBiometricEvent: %lu", eventType);
 
     if (
@@ -232,12 +237,13 @@ BOOL doUnlock(NSString *passcode) {
 
     SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
 
-    // TODO: figure out how to detect if Face ID/Touch ID is enrolled
-    if (resource.hasMesaSupport) {
-        return 1;
-    }
-    if (resource.hasPearlSupport) {
-        return 2;
+    if (resource.hasEnrolledIdentities) {
+        if (resource.hasMesaSupport) {
+            return 1;
+        }
+        if (resource.hasPearlSupport) {
+            return 2;
+        }
     }
     return 0;
 }
@@ -739,6 +745,12 @@ BOOL doUnlock(NSString *passcode) {
 
     return [prefs boolForKey:@"inBioLockout"] ? 1 : 0;
 }
+
+- (BOOL)hasEnrolledIdentities {
+    BOOL orig = %orig;
+    NSLog(@"hasEnrolledIdentities: %d", orig);
+    return orig;
+}
 %end
 
 %hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
@@ -794,7 +806,6 @@ BOOL doUnlock(NSString *passcode) {
         NSLog(@"Injected into %@", bundleId);
 
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
-        NSLog(@"Still alive");
 
         [prefs registerDefaults:@{
             @"inBioLockout": @NO,

@@ -133,14 +133,14 @@ BOOL doUnlock(NSString *passcode) {
         %log(@"no passcode set, ignoring");
         return orig;
     }
-    /*SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
+    SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
     if (!resource.hasEnrolledIdentities) {
         %log(@"no biometrics enrolled, ignoring");
         return orig;
-    }*/
+    }
     NSLog(@"handleBiometricEvent: %lu", eventType);
 
-    if ([[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] == 1
+    if ([[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] > 0
             || [lockOutController isTemporarilyBlocked]
             || [lockOutController isPermanentlyBlocked]) {
         return orig;

@@ -237,14 +237,14 @@ BOOL doUnlock(NSString *passcode) {
 
     SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
 
-    //if (resource.hasEnrolledIdentities) {
+    if ([prefs boolForKey:@"isBiometricsEnrolled"]) {
         if (resource.hasMesaSupport) {
             return 1;
         }
         if (resource.hasPearlSupport) {
             return 2;
         }
-    //}
+    }
     return 0;
 }
 
@@ -324,10 +324,6 @@ BOOL doUnlock(NSString *passcode) {
 %hook MCPasscodeManager
 - (BOOL)isPasscodeSet {
     %log(@"hooked");
-
-    /*if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.Preferences"]) {
-        return NO;
-    }*/
 
     if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         %log(@"Spoofing passcode state");
@@ -747,9 +743,12 @@ BOOL doUnlock(NSString *passcode) {
 }
 
 - (BOOL)hasEnrolledIdentities {
-    BOOL orig = %orig;
-    NSLog(@"hasEnrolledIdentities: %d", orig);
-    return orig;
+    BOOL ret = %orig;
+    NSLog(@"hasEnrolledIdentities: %d", ret);
+    if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
+        [prefs setBool:ret forKey:@"isBiometricsEnrolled"];
+    }
+    return ret;
 }
 %end
 

@@ -163,7 +163,7 @@ BOOL doUnlock(NSString *passcode) {
             success = YES;
         }];
         while (!success) {}
-
+        isInternalUnlock = YES;
         [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
                                                  mesa:NO
                                        finishUIUnlock:inUnlockTransition

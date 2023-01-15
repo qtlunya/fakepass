@@ -6,12 +6,24 @@
 @import UIKit;
 
 #import <SpringBoard/SpringBoard.h>
-//#import <SpringBoard/SBLockScreenManager.h>
 
 #import <Cephei/HBPreferences.h>
 #import <Cephei/HBRespringController.h>
 
 #import "util.h"
+
+@interface BKDevice
++ (instancetype)deviceWithDescriptor:(id)descriptor error:(NSError **)error;
+@end
+
+@interface BKDeviceManager
++ (NSArray *)availableDevices;
+@end
+
+@interface BKFaceDetectOperation
+- (instancetype)initWithDevice:(BKDevice *)device;
+- (void)startBioOperation:(BOOL)arg1 reply:(id)reply;
+@end
 
 @interface CSCoverSheetViewController
 - (BOOL)isMainPageVisible;
@@ -114,9 +126,11 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook CSUserPresenceMonitor
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
+    BOOL orig = %orig;
+
     if (!isPasscodeSet()) {
         %log(@"no passcode set, ignoring");
-        return %orig;
+        return orig;
     }
     SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
     if (!resource.hasEnrolledIdentities) {
@@ -133,19 +147,29 @@ BOOL doUnlock(NSString *passcode) {
         return %orig;
     }
 
-    if (eventType == 1 || eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
-        SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
+    if (eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
+        NSArray *devices = [%c(BKDeviceManager) availableDevices];
+        NSError *error = nil;
+        BKDevice *device = [%c(BKDevice) deviceWithDescriptor:devices[0] error:&error];
+        if (error) {
+            NSLog(@"BKDevice init failed: %@", [error description]);
+            return orig;
+        }
 
+        BKFaceDetectOperation *operation = [[%c(BKFaceDetectOperation) alloc] initWithDevice:device];
+        SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
         isInternalUnlock = YES;
-        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
-                                                 mesa:NO
-                                       finishUIUnlock:NO
-                                           completion:^{
-            isInternalUnlock = NO;
+        [operation startBioOperation:YES reply:^{
+            NSLog(@"Face detect successful");
+
+            [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
+                                                     mesa:NO
+                                           finishUIUnlock:NO
+                                               completion:^{ isInternalUnlock = NO; }];
         }];
     }
 
-    return %orig;
+    return orig;
 }
 %end
 
@@ -799,6 +823,7 @@ BOOL doUnlock(NSString *passcode) {
             || [bundleId isEqualToString:@"com.apple.backboardd"]
             || [bundleId isEqualToString:@"com.apple.datamigrator"]
             || [bundleId isEqualToString:@"com.apple.DictionaryServiceHelper"]
+            || [bundleId isEqualToString:@"com.apple.VideoSubscriberAccount.DeveloperService"]
         ) {
             return;
         }

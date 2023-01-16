@@ -145,7 +145,7 @@ BOOL doUnlock(NSString *passcode) {
     SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
     SBFDeviceLockOutController *lockOutController = lockScreenManager.lockOutController;
 
-    if ([[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] > 0
+    if ([prefs boolForKey:@"inBioLockout"]
             || [lockOutController isTemporarilyBlocked]
             || [lockOutController isPermanentlyBlocked]) {
         return orig;

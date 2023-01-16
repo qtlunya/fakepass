@@ -466,6 +466,20 @@ BOOL doUnlock(NSString *passcode) {
 }
 %end
 
+%hook NSBundle
+- (NSString *)localizedStringForKey:(NSString *)key value:(NSString *)value table:(NSString *)tableName {
+    NSString *ret = %orig;
+
+    if ([self.bundleIdentifier isEqualToString:@"com.apple.preferences-ui-framework"]
+            && [tableName isEqualToString:@"Passcode Lock"]
+            && [key isEqualToString:@"PASSCODE_ON"]) {
+        return [NSString stringWithFormat:@"%@ (FakePass)", ret];
+    }
+
+    return ret;
+}
+%end
+
 %hook PSUIPearlPasscodeController
 - (id)setFaceIDEnrollmentCoordinator:(id)coordinator {
     BOOL isEnrollingFaceID = (coordinator != nil);

@@ -54,13 +54,12 @@
 @end
 
 @interface SBLockScreenManager
+@property (getter=_lockOutController,nonatomic,retain) SBFDeviceLockOutController *lockOutController;
 + (instancetype)sharedInstance;
 - (BOOL)_attemptUnlockWithPasscode:(NSString *)passcode
                               mesa:(BOOL)mesa
                     finishUIUnlock:(BOOL)finishUIUnlock
                         completion:(id)completion;
-- (BOOL)_shouldUnlockUIOnKeyDownEvent;
-- (CSCoverSheetViewController *)coverSheetViewController;
 - (void)lockScreenViewControllerRequestsUnlock;
 @end
 
@@ -80,7 +79,6 @@ BOOL isResetting = NO;
 BOOL didStartBlock = NO;
 BOOL creatingPasscode = NO;
 int lastLockTime = 0;
-__weak SBFDeviceLockOutController *lockOutController = NULL;
 
 BOOL isPasscodeSet() {
     if ([prefs boolForKey:@"isEnrollingFaceID"]) {
@@ -116,6 +114,8 @@ BOOL doUnlock(NSString *passcode) {
         [prefs setInteger:failedAttempts forKey:@"failedAttempts"];
         if (failedAttempts >= 6) {
             [prefs setInteger:[NSDate date].timeIntervalSince1970 forKey:@"blockTime"];
+            SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
+            SBFDeviceLockOutController *lockOutController = lockScreenManager.lockOutController;
             if (lockOutController != NULL) {
                 NSLog(@"Triggering device lockout due to too many failed attempts");
                 [lockOutController temporaryBlockStatusChanged];
@@ -133,12 +133,17 @@ BOOL doUnlock(NSString *passcode) {
         %log(@"no passcode set, ignoring");
         return orig;
     }
+
     SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
     if (!resource.hasEnrolledIdentities) {
         %log(@"no biometrics enrolled, ignoring");
         return orig;
     }
+
     NSLog(@"handleBiometricEvent: %lu", eventType);
+
+    SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
+    SBFDeviceLockOutController *lockOutController = lockScreenManager.lockOutController;
 
     if ([[%c(SBUIBiometricResource) sharedInstance] biometricLockoutState] > 0
             || [lockOutController isTemporarilyBlocked]
@@ -167,7 +172,10 @@ BOOL doUnlock(NSString *passcode) {
         [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
                                                  mesa:NO
                                        finishUIUnlock:inUnlockTransition
-                                           completion:^{ isInternalUnlock = NO; inUnlockTransition = NO; }];
+                                           completion:^{
+            isInternalUnlock = NO;
+            inUnlockTransition = NO;
+       }];
     }
 
     return orig;
@@ -469,7 +477,7 @@ BOOL doUnlock(NSString *passcode) {
 %end
 
 %hook SBBacklightController
-- (void) _startFadeOutAnimationFromLockSource:(int)arg1 {
+- (void)_startFadeOutAnimationFromLockSource:(int)arg1 {
     if (!isPasscodeSet()) {
         %log(@"no passcode set, ignoring");
         return %orig;
@@ -552,18 +560,6 @@ BOOL doUnlock(NSString *passcode) {
 %end
 
 %hook SBFDeviceLockOutController
-- (id)initWithThermalController:(id)arg1 authenticationController:(id)arg2 {
-    if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
-        return %orig;
-    }
-    %log(@"hooked");
-
-    lockOutController = self;
-
-    return %orig;
-}
-
 - (BOOL)isPermanentlyBlocked {
     if (!isPasscodeSet()) {
         //%log(@"no passcode set, ignoring");

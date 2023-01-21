@@ -837,17 +837,20 @@ BOOL doUnlock(NSString *passcode) {
 %ctor {
     @autoreleasepool {
         NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
+        NSString *bundlePath = [NSBundle mainBundle].bundlePath;
+
+        NSArray *daemonAllowlist = @[
+            @"com.apple.coreauthd",
+        ];
 
         // skip injection into problematic processes
-        if (!bundleId
-                || [bundleId isEqualToString:@"com.apple.backboardd"]
-                || [bundleId isEqualToString:@"com.apple.datamigrator"]
-                || [bundleId isEqualToString:@"com.apple.DictionaryServiceHelper"]
-                || [bundleId isEqualToString:@"com.apple.VideoSubscriberAccount.DeveloperService"]) {
+        if (!bundleId || ([bundleId hasPrefix:@"com.apple."]
+                          && ![bundlePath hasSuffix:@".app"]
+                          && ![daemonAllowlist containsObject:bundleId])) {
             return;
         }
 
-        NSLog(@"Injected into %@", bundleId);
+        NSLog(@"Injected into %@ (%@)", bundleId, bundlePath);
 
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 

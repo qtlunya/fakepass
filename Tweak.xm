@@ -85,10 +85,10 @@ BOOL _isPasscodeSet() {
 }
 
 BOOL isPasscodeSet() {
-    if ([prefs boolForKey:@"isEnrollingFaceID"]) {
+    /*if ([prefs boolForKey:@"isEnrollingFaceID"]) {
         NSLog(@"isPasscodeSet: Face ID being enrolled, returning no");
         return NO;
-    }
+    }*/
 
     //NSLog(@"isPasscodeSet: not being enrolled");
     return _isPasscodeSet();
@@ -475,6 +475,13 @@ BOOL doUnlock(NSString *passcode) {
     }
 
     return ret;
+}
+%end
+
+%hook PSUIFaceIDEnrollmentCoordinator
+- (id)startWithPasscode:(id)passcode {
+    %log(@"hooked");
+    return %orig(nil);
 }
 %end
 

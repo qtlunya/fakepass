@@ -558,7 +558,7 @@ BOOL doUnlock(NSString *passcode) {
 
     NSTimeInterval remainingSecs = (blockTime + lockoutTime) - now;
 
-    NSDateComponents *dateComponents = [[NSDateComponents alloc] init];
+    NSDateComponents *dateComponents = [NSDateComponents new];
     dateComponents.minute = ceil(remainingSecs / 60);
 
     if (failedAttempts <= 10) {

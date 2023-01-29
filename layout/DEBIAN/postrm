@@ -1,0 +1,3 @@
+#!/bin/sh
+rm -f /var/mobile/Library/Preferences/net.cadoth.fakepass.plist
+killall -9 cfprefsd

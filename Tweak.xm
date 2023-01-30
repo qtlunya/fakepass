@@ -25,11 +25,6 @@
 - (void)startBioOperation:(BOOL)arg1 reply:(id)reply;
 @end
 
-@interface CSCoverSheetViewController
-- (BOOL)isMainPageVisible;
-- (BOOL)isShowingTodayView;
-@end
-
 @interface LASecureData
 - (NSData *)data;
 @end
@@ -37,10 +32,6 @@
 @interface MCProfileConnection
 + (instancetype)sharedConnection;
 - (id)effectiveValueForSetting:(NSString *)setting;
-@end
-
-@interface SBCoverSheetPresentationManager
-+ (instancetype)sharedInstance;
 @end
 
 @interface SBFDeviceLockOutController

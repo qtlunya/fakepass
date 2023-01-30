@@ -12,7 +12,7 @@
 
 #import "util.h"
 
-/*@interface BKDevice
+@interface BKDevice
 + (instancetype)deviceWithDescriptor:(id)descriptor error:(NSError **)error;
 @end
 
@@ -23,7 +23,7 @@
 @interface BKMatchOperation
 - (instancetype)initWithDevice:(BKDevice *)device;
 - (void)startBioOperation:(BOOL)arg1 reply:(id)reply;
-@end*/
+@end
 
 @interface LASecureData
 - (NSData *)data;
@@ -47,25 +47,25 @@
 @interface SBLockScreenManager
 @property (getter=_lockOutController,nonatomic,retain) SBFDeviceLockOutController *lockOutController;
 + (instancetype)sharedInstance;
-/*- (BOOL)_attemptUnlockWithPasscode:(NSString *)passcode
+- (BOOL)_attemptUnlockWithPasscode:(NSString *)passcode
                               mesa:(BOOL)mesa
                     finishUIUnlock:(BOOL)finishUIUnlock
-                        completion:(id)completion;*/
+                        completion:(id)completion;
 - (void)lockScreenViewControllerRequestsUnlock;
 @end
 
-/*@interface SBUIBiometricResource
+@interface SBUIBiometricResource
 @property (nonatomic,readonly) BOOL hasEnrolledIdentities;
 @property (nonatomic,readonly) BOOL hasMesaSupport;
 @property (nonatomic,readonly) BOOL hasPearlSupport;
 + (instancetype)sharedInstance;
 - (NSUInteger)biometricLockoutState;
-@end*/
+@end
 
 HBPreferences *prefs;
 BOOL isUnlocked;
 BOOL isInternalUnlock = NO;
-//BOOL inUnlockTransition = NO;
+BOOL inUnlockTransition = NO;
 BOOL isResetting = NO;
 BOOL didStartBlock = NO;
 BOOL creatingPasscode = NO;
@@ -101,7 +101,7 @@ BOOL doUnlock(NSString *passcode) {
         isUnlocked = YES;
         [prefs removeObjectForKey:@"blockTime"];
         [prefs setInteger:0 forKey:@"failedAttempts"];
-        //[prefs setBool:NO forKey:@"inBioLockout"];
+        [prefs setBool:NO forKey:@"inBioLockout"];
         return YES;
     } else {
         NSLog(@"Failed unlock with passcode: %@", passcode);
@@ -120,7 +120,7 @@ BOOL doUnlock(NSString *passcode) {
     }
 }
 
-/*%hook CSUserPresenceMonitor
+%hook CSUserPresenceMonitor
 - (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
     BOOL orig = %orig;
 
@@ -175,7 +175,7 @@ BOOL doUnlock(NSString *passcode) {
 
     return orig;
 }
-%end*/
+%end
 
 %hook DevicePINController
 - (int)pinLength {
@@ -255,7 +255,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 %end
 
-/*%hook LAContext
+%hook LAContext
 - (NSInteger)biometryType {
     if (!isPasscodeSet()) {
         %log(@"no passcode set, ignoring");
@@ -327,7 +327,7 @@ BOOL doUnlock(NSString *passcode) {
     };
     %orig(policy, localizedReason, callback);
 }
-%end*/
+%end
 
 %hook LAPasscodeHelper
 - (NSInteger)verifyPasswordUsingAKS:(LASecureData *)secureData
@@ -394,7 +394,7 @@ BOOL doUnlock(NSString *passcode) {
 
         [prefs removeObjectForKey:@"blockTime"];
         [prefs removeObjectForKey:@"failedAttempts"];
-        //[prefs removeObjectForKey:@"inBioLockout"];
+        [prefs removeObjectForKey:@"inBioLockout"];
         [prefs removeObjectForKey:@"passcodeHash"];
         [prefs removeObjectForKey:@"passcodeSalt"];
         [prefs removeObjectForKey:@"passcodeType"];
@@ -469,7 +469,7 @@ BOOL doUnlock(NSString *passcode) {
 }
 %end
 
-/*%hook PSUIFaceIDEnrollmentCoordinator
+%hook PSUIFaceIDEnrollmentCoordinator
 - (id)startWithPasscode:(id)passcode {
     %log(@"hooked");
     return %orig(nil);
@@ -490,7 +490,7 @@ BOOL doUnlock(NSString *passcode) {
 
     return %orig;
 }
-%end*/
+%end
 
 %hook SBBacklightController
 - (void)_startFadeOutAnimationFromLockSource:(int)arg1 {
@@ -701,7 +701,7 @@ BOOL doUnlock(NSString *passcode) {
 %hook SBCoverSheetSystemGesturesDelegate
 - (id)dismissGestureRecognizer {
     //%log(@"hooked");
-    //inUnlockTransition = YES;
+    inUnlockTransition = YES;
     return %orig;
 }
 %end
@@ -719,9 +719,9 @@ BOOL doUnlock(NSString *passcode) {
     if ([[prefs objectForKey:@"passcodeHash"] length] > 0) {
         NSLog(@"Locking device");
         isUnlocked = NO;
-        //inUnlockTransition = NO;
+        inUnlockTransition = NO;
         lastLockTime = [NSDate date].timeIntervalSince1970;
-        //[prefs setBool:NO forKey:@"isEnrollingFaceID"];
+        [prefs setBool:NO forKey:@"isEnrollingFaceID"];
     }
 
     %orig;
@@ -744,8 +744,8 @@ BOOL doUnlock(NSString *passcode) {
         if (lastLockTime > 0 && maxGracePeriod > 0 && lastLockTime + maxGracePeriod > now) {
             NSLog(@"Unlocking due to grace period");
             isUnlocked = YES;
-            //inUnlockTransition = NO;
-            //[prefs setBool:NO forKey:@"inBioLockout"];
+            inUnlockTransition = NO;
+            [prefs setBool:NO forKey:@"inBioLockout"];
         }
     }
 
@@ -767,14 +767,14 @@ BOOL doUnlock(NSString *passcode) {
         }
 
         isUnlocked = NO;
-        //[prefs setBool:YES forKey:@"inBioLockout"];
+        [prefs setBool:YES forKey:@"inBioLockout"];
     }
 
     %orig;
 }
 %end
 
-/*%hook SBUIBiometricResource
+%hook SBUIBiometricResource
 - (NSUInteger)biometricLockoutState {
     if (!isPasscodeSet()) {
         %log(@"no passcode set, ignoring");
@@ -793,7 +793,7 @@ BOOL doUnlock(NSString *passcode) {
     }
     return ret;
 }
-%end*/
+%end
 
 %hookf(NSInteger, SBUICurrentPasscodeStyleForUser) {
     if (!isPasscodeSet()) {
@@ -825,7 +825,7 @@ BOOL doUnlock(NSString *passcode) {
         }
 
         isUnlocked = NO;
-        //[prefs setBool:YES forKey:@"inBioLockout"];
+        [prefs setBool:YES forKey:@"inBioLockout"];
     }
 
     %orig;
@@ -853,15 +853,15 @@ BOOL doUnlock(NSString *passcode) {
         prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
 
         [prefs registerDefaults:@{
-            //@"inBioLockout": @NO,
-            //@"isEnrollingFaceID": @NO,
+            @"inBioLockout": @NO,
+            @"isEnrollingFaceID": @NO,
             @"lockOnRespring": @YES,
             @"maxGracePeriod": [[%c(MCProfileConnection) sharedConnection] effectiveValueForSetting:@"maxGracePeriod"],
         }];
 
-        /*if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+        if ([bundleId isEqualToString:@"com.apple.springboard"]) {
             [prefs setBool:NO forKey:@"isEnrollingFaceID"];
-        }*/
+        }
 
         isUnlocked = !isPasscodeSet() || ![prefs boolForKey:@"lockOnRespring"];
 

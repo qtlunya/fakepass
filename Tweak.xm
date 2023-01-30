@@ -45,12 +45,8 @@ BOOL didStartBlock = NO;
 BOOL creatingPasscode = NO;
 int lastLockTime = 0;
 
-BOOL _isPasscodeSet() {
-    return [[prefs objectForKey:@"passcodeHash"] length] > 0;
-}
-
 BOOL isPasscodeSet() {
-    return _isPasscodeSet();
+    return [[prefs objectForKey:@"passcodeHash"] length] > 0;
 }
 
 BOOL checkPasscode(NSString *passcode) {

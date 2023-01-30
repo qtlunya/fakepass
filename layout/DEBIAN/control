@@ -1,6 +1,6 @@
 Package: net.cadoth.fakepass
 Name: FakePass
-Version: 0.1.1
+Version: 0.1.2
 Architecture: iphoneos-arm
 Description: Fake passcode for checkra1n/palera1n on A10/A11 iOS 14+
 Maintainer: alexia <me@alexia.lol>

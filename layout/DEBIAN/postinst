@@ -1,3 +1,16 @@
 #!/bin/sh
 
+finish() {
+    if [ -z "$1" ] || [ -z "$CYDIA" ]; then
+        return
+    fi
+    read -r fd ver <<EOF
+$CYDIA
+EOF
+    [ "$ver" -eq 1 ] || return
+    # shellcheck disable=SC2039,SC3021
+    echo "finish:$1" >&"$fd"
+}
+
 killall -9 coreauthd || true
+finish restart

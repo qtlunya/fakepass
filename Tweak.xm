@@ -161,22 +161,6 @@ BOOL doUnlock(NSString *passcode) {
 }
 %end
 
-%hook LAPasscodeHelper
-- (NSInteger)verifyPasswordUsingAKS:(LASecureData *)secureData
-                         acmContext:(id)acmContext
-                             userId:(unsigned int)userId
-                             policy:(NSInteger)policy
-                            options:(NSDictionary *)options {
-    if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
-        return %orig;
-    }
-    %log(@"hooked");
-
-    return checkPasscode([[NSString alloc] initWithData:secureData.data encoding:NSUTF8StringEncoding]) ? 0 : 1;
-}
-%end
-
 %hook MCPasscodeManager
 - (BOOL)isPasscodeSet {
     %log(@"hooked");
@@ -616,14 +600,9 @@ BOOL doUnlock(NSString *passcode) {
         NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
         NSString *bundlePath = [NSBundle mainBundle].bundlePath;
 
-        NSArray *daemonAllowlist = @[
-            @"com.apple.coreauthd",
-        ];
-
         // skip injection into problematic processes
         if (!bundleId || ([bundleId hasPrefix:@"com.apple."]
-                          && ![bundlePath hasSuffix:@".app"]
-                          && ![daemonAllowlist containsObject:bundleId])) {
+                          && ![bundlePath hasSuffix:@".app"])) {
             return;
         }
 

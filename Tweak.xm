@@ -737,6 +737,14 @@ BOOL doUnlock(NSString *passcode) {
 
     NSLog(@"Screen unlocked from source: %d", source);
 
+    if (lockOutController != NULL) {
+        NSLog(@"Clearing device lockout");
+        int blockTime = [prefs integerForKey:@"blockTime"];
+        [prefs removeObjectForKey:@"blockTime"];
+        [prefs setInteger:blockTime forKey:@"blockTime"];
+        [lockOutController temporaryBlockStatusChanged];
+    }
+
     if (!isUnlocked) {
         NSTimeInterval maxGracePeriod = [prefs integerForKey:@"maxGracePeriod"];
         NSTimeInterval now = [NSDate date].timeIntervalSince1970;

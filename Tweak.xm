@@ -737,6 +737,8 @@ BOOL doUnlock(NSString *passcode) {
 
     NSLog(@"Screen unlocked from source: %d", source);
 
+    SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
+    SBFDeviceLockOutController *lockOutController = lockScreenManager.lockOutController;
     if (lockOutController != NULL) {
         NSLog(@"Clearing device lockout");
         int blockTime = [prefs integerForKey:@"blockTime"];

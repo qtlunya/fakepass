@@ -875,9 +875,7 @@ BOOL doUnlock(NSString *passcode) {
 
         isUnlocked = !isPasscodeSet() || ![prefs boolForKey:@"lockOnRespring"];
 
-        void *SpringBoardUIServices = dlopen(
-            "/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY
-        );
+        void *SpringBoardUIServices = dlopen("/System/Library/PrivateFrameworks/SpringBoardUIServices.framework/SpringBoardUIServices", RTLD_LAZY);
         %init(SBUICurrentPasscodeStyleForUser = dlsym(SpringBoardUIServices, "SBUICurrentPasscodeStyleForUser"));
     }
 }

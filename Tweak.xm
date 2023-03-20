@@ -85,10 +85,6 @@ BOOL isPasscodeSet() {
 }
 
 BOOL checkPasscode(NSString *passcode) {
-    if (isInternalUnlock && [passcode isEqualToString:@"__FAKEPASS_INTERNAL_UNLOCK"]) {
-        return YES;
-    }
-
     prefs = [[NSUserDefaults alloc] initWithSuiteName:@"/var/mobile/Library/Preferences/net.cadoth.fakepass.plist"];
     NSString *salt = [prefs objectForKey:@"passcodeSalt"];
     return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
@@ -118,63 +114,6 @@ BOOL doUnlock(NSString *passcode) {
         return NO;
     }
 }
-
-%hook CSUserPresenceMonitor
-- (BOOL)_handleBiometricEvent:(NSUInteger)eventType {
-    BOOL orig = %orig;
-
-    if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
-        return orig;
-    }
-
-    SBUIBiometricResource *resource = [%c(SBUIBiometricResource) sharedInstance];
-    if (!resource.hasEnrolledIdentities) {
-        %log(@"no biometrics enrolled, ignoring");
-        return orig;
-    }
-
-    NSLog(@"handleBiometricEvent: %lu", eventType);
-
-    SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
-    SBFDeviceLockOutController *lockOutController = lockScreenManager.lockOutController;
-
-    if ([prefs boolForKey:@"inBioLockout"]
-            || [lockOutController isTemporarilyBlocked]
-            || [lockOutController isPermanentlyBlocked]) {
-        return orig;
-    }
-
-    if (eventType == 1 || eventType == 13) { // 1 = Touch ID scan, 13 = Face ID scan
-        NSArray *devices = [%c(BKDeviceManager) availableDevices];
-        NSError *error = nil;
-        BKDevice *device = [%c(BKDevice) deviceWithDescriptor:devices[0] error:&error];
-        if (error) {
-            NSLog(@"BKDevice init failed: %@", [error description]);
-            return orig;
-        }
-
-        BKMatchOperation *operation = [[%c(BKMatchOperation) alloc] initWithDevice:device];
-        SBLockScreenManager *lockScreenManager = [%c(SBLockScreenManager) sharedInstance];
-        __block BOOL success = NO;
-        [operation startBioOperation:YES reply:^{
-            NSLog(@"Biometric match successful");
-            success = YES;
-        }];
-        while (!success) {}
-        isInternalUnlock = YES;
-        [lockScreenManager _attemptUnlockWithPasscode:@"__FAKEPASS_INTERNAL_UNLOCK"
-                                                 mesa:NO
-                                       finishUIUnlock:inUnlockTransition
-                                           completion:^{
-            isInternalUnlock = NO;
-            inUnlockTransition = NO;
-       }];
-    }
-
-    return orig;
-}
-%end
 
 %hook DevicePINController
 - (int)pinLength {

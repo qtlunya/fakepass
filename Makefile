@@ -9,7 +9,8 @@ TWEAK_NAME = FakePass
 
 FakePass_FILES = Tweak.xm util.m
 FakePass_CFLAGS = -fobjc-arc -Wno-error
-FakePass_EXTRA_FRAMEWORKS += Cephei
+FakePass_LIBRARIES = Sandy
+FakePass_PRIVATE_FRAMEWORKS = FrontBoardServices SpringBoardServices
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 SUBPROJECTS += prefs

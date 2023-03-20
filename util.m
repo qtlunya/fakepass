@@ -1,6 +1,9 @@
 @import CommonCrypto;
 @import Foundation;
 
+#import <FrontBoardServices/FBSSystemService.h>
+#import <SpringBoardServices/SBSRelaunchAction.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,6 +42,15 @@ NS_RETURNS_RETAINED NSString *generateSalt() {
     }
     NSLog(@"Salt: %@", salt);
     return salt;
+}
+
+void respringAndReturnTo(NSURL *targetURL) {
+    SBSRelaunchAction *restartAction = [SBSRelaunchAction actionWithReason:@"RestartRenderServer" options:SBSRelaunchActionOptionsFadeToBlackTransition targetURL:targetURL];
+    [[FBSSystemService sharedService] sendActions:[NSSet setWithObject:restartAction] withResult:nil];
+}
+
+void respring() {
+    respringAndReturnTo(nil);
 }
 
 #ifdef __cplusplus

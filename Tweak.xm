@@ -7,8 +7,7 @@
 
 #import <SpringBoard/SpringBoard.h>
 
-#import <Cephei/HBPreferences.h>
-#import <Cephei/HBRespringController.h>
+#import <libSandy.h>
 
 #import "util.h"
 
@@ -37,7 +36,7 @@
 - (void)lockScreenViewControllerRequestsUnlock;
 @end
 
-HBPreferences *prefs;
+NSUserDefaults *prefs;
 BOOL isUnlocked;
 BOOL isInternalUnlock = NO;
 BOOL isResetting = NO;
@@ -54,7 +53,7 @@ BOOL checkPasscode(NSString *passcode) {
         return YES;
     }
 
-    prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+    prefs = [[NSUserDefaults alloc] initWithSuiteName:@"/var/mobile/Library/Preferences/net.cadoth.fakepass.plist"];
     NSString *salt = [prefs objectForKey:@"passcodeSalt"];
     return [generateHashFor(passcode, salt) isEqualToString:[prefs objectForKey:@"passcodeHash"]];
 }
@@ -172,7 +171,7 @@ BOOL doUnlock(NSString *passcode) {
 - (BOOL)changePasscodeFrom:(NSString *)oldPasscode to:(NSString *)newPasscode outError:(id *)outError {
     creatingPasscode = NO;
 
-    prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+    prefs = [[NSUserDefaults alloc] initWithSuiteName:@"/var/mobile/Library/Preferences/net.cadoth.fakepass.plist"];
 
     if (oldPasscode.length > 0 && !checkPasscode(oldPasscode)) {
         %log(@"old passcode incorrect");
@@ -217,7 +216,7 @@ BOOL doUnlock(NSString *passcode) {
 
     if (!oldPasscode) {
         // respring to work around bug where it's impossible to unlock
-        [HBRespringController respring];
+        respring();
     }
 
     return true;
@@ -246,10 +245,8 @@ BOOL doUnlock(NSString *passcode) {
     }
     %log(@"hooked");
 
-    NSInteger maxGracePeriod = [prefs integerForKey:@"maxGracePeriod" default:-1];
-
-    if ([setting isEqualToString:@"maxGracePeriod"] && maxGracePeriod > -1) {
-        return @(maxGracePeriod);
+    if ([setting isEqualToString:@"maxGracePeriod"] && [prefs objectForKey:@"maxGracePeriod"] != nil) {
+        return @([prefs integerForKey:@"maxGracePeriod"]);
     }
 
     return %orig;
@@ -378,7 +375,7 @@ BOOL doUnlock(NSString *passcode) {
     BOOL ret = [prefs integerForKey:@"failedAttempts"] > 10;
 
     if (ret && !isResetting) {
-        HBPreferences *sbPrefs = [[HBPreferences alloc] initWithIdentifier:@"com.apple.springboard"];
+        NSUserDefaults *sbPrefs = [[NSUserDefaults alloc] initWithSuiteName:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"];
 
         if ([sbPrefs boolForKey:@"SBDeviceWipeEnabled"]) {
             void *UIKit = dlopen("/System/Library/Framework/UIKit.framework/UIKit", RTLD_LAZY);
@@ -394,7 +391,7 @@ BOOL doUnlock(NSString *passcode) {
             isResetting = YES;
             SBDataReset(SBSSpringBoardServerPort(), 5);
             // respring seems to be needed to kickstart the process
-            [HBRespringController respring];
+            respring();
         }
     }
 
@@ -618,7 +615,9 @@ BOOL doUnlock(NSString *passcode) {
 
         NSLog(@"Injected into %@ (%@)", bundleId, bundlePath);
 
-        prefs = [[HBPreferences alloc] initWithIdentifier:@"net.cadoth.fakepass"];
+        libSandy_applyProfile("FakePass");
+
+        prefs = [[NSUserDefaults alloc] initWithSuiteName:@"/var/mobile/Library/Preferences/net.cadoth.fakepass.plist"];
 
         [prefs registerDefaults:@{
             @"lockOnRespring": @YES,

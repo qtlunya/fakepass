@@ -1,9 +1,6 @@
 @import CommonCrypto;
 @import CoreFoundation;
 
-#import <Cephei/HBPreferences.h>
-#import <Cephei/HBRespringController.h>
-
 #import "../util.m"
 #import "FPARootListController.h"
 
@@ -44,7 +41,7 @@
 
     UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"Respring"
                                                        style:UIAlertActionStyleDestructive
-                                                     handler:^(UIAlertAction *action) { [HBRespringController respringAndReturnTo:relaunchURL]; }];
+                                                     handler:^(UIAlertAction *action) { respringAndReturnTo(relaunchURL); }];
 
     [alert addAction:cancelAction];
     [alert addAction:okAction];

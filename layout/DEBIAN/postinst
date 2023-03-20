@@ -12,5 +12,4 @@ EOF
     echo "finish:$1" >&"$fd"
 }
 
-killall -9 coreauthd || true
 finish restart

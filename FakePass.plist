@@ -6,11 +6,8 @@
     <dict>
         <key>Bundles</key>
         <array>
-            <string>com.apple.UIKit</string>
-        </array>
-        <key>Executables</key>
-        <array>
-            <string>coreauthd</string>
+            <string>com.apple.springboard</string>
+            <string>com.apple.Preferences</string>
         </array>
     </dict>
 </dict>

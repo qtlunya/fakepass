@@ -1,6 +1,6 @@
 Package: net.cadoth.fakepass
 Name: FakePass
-Version: 0.2.0b14
+Version: 0.2.0b15
 Architecture: iphoneos-arm
 Description: Fake passcode for checkm8 jailbreaks on iOS 14+ on A11
 Maintainer: alexia <me@alexia.lol>

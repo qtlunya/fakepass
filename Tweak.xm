@@ -721,16 +721,6 @@ BOOL doUnlock(NSString *passcode) {
 %end
 
 %hook SBUIBiometricResource
-- (NSUInteger)biometricLockoutState {
-    if (!isPasscodeSet()) {
-        %log(@"no passcode set, ignoring");
-        return %orig;
-    }
-    %log(@"hooked");
-
-    return [prefs boolForKey:@"inBioLockout"] ? 1 : 0;
-}
-
 - (BOOL)hasEnrolledIdentities {
     BOOL ret = %orig;
     NSLog(@"hasEnrolledIdentities: %d", ret);

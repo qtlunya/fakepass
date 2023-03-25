@@ -70,18 +70,8 @@ BOOL didStartBlock = NO;
 BOOL creatingPasscode = NO;
 int lastLockTime = 0;
 
-BOOL _isPasscodeSet() {
-    return [[prefs objectForKey:@"passcodeHash"] length] > 0;
-}
-
 BOOL isPasscodeSet() {
-    /*if ([prefs boolForKey:@"isEnrollingFaceID"]) {
-        NSLog(@"isPasscodeSet: Face ID being enrolled, returning no");
-        return NO;
-    }*/
-
-    //NSLog(@"isPasscodeSet: not being enrolled");
-    return _isPasscodeSet();
+    return [[prefs objectForKey:@"passcodeHash"] length] > 0;
 }
 
 BOOL checkPasscode(NSString *passcode) {
@@ -414,7 +404,7 @@ BOOL doUnlock(NSString *passcode) {
 
 %hook PSUIPearlPasscodeController
 - (id)setFaceIDEnrollmentCoordinator:(id)coordinator {
-    if (!_isPasscodeSet()) {
+    if (!isPasscodeSet()) {
         %log(@"no passcode set, ignoring");
         return %orig;
     }

@@ -1,5 +1,5 @@
-Package: net.cadoth.fakepass
-Name: FakePass
+Package: net.cadoth.fakepass.beta
+Name: FakePass (Beta)
 Version: 0.2.0b15
 Architecture: iphoneos-arm
 Description: Fake passcode for checkm8 jailbreaks on iOS 14+ on A11
@@ -7,6 +7,6 @@ Maintainer: alexia <me@alexia.lol>
 Author: alexia <me@alexia.lol>
 Section: Tweaks
 Depends: com.opa334.libsandy, cy+cpu.arm64, firmware (>= 14.0), mobilesubstrate (>= 0.9.5000), preferenceloader
-Conflicts: cy+cpu.arm64e, com.foxfort.checkl0ck, com.yourepo.plat-ykor.check4round, me.krit.lockdown
+Conflicts: cy+cpu.arm64e, com.foxfort.checkl0ck, com.yourepo.plat-ykor.check4round, me.krit.lockdown, net.cadoth.fakepass
 Depiction: https://repo.alexia.lol/depictions/net.cadoth.fakepass
 SileoDepiction: https://repo.alexia.lol/sileo-depictions/net.cadoth.fakepass.json

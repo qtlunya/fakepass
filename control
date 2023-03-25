@@ -8,5 +8,5 @@ Author: alexia <me@alexia.lol>
 Section: Tweaks
 Depends: com.opa334.libsandy, cy+cpu.arm64, firmware (>= 14.0), mobilesubstrate (>= 0.9.5000), preferenceloader
 Conflicts: cy+cpu.arm64e, com.foxfort.checkl0ck, com.yourepo.plat-ykor.check4round, me.krit.lockdown, net.cadoth.fakepass
-Depiction: https://repo.alexia.lol/depictions/net.cadoth.fakepass
-SileoDepiction: https://repo.alexia.lol/sileo-depictions/net.cadoth.fakepass.json
+Depiction: https://repo.alexia.lol/depictions/net.cadoth.fakepass.beta
+SileoDepiction: https://repo.alexia.lol/sileo-depictions/net.cadoth.fakepass.beta.json
